@@ -9,11 +9,29 @@ base {
 	archivesName = project.archives_base_name
 }
 
+repositories {
+	exclusiveContent {
+		forRepository {
+			maven {
+				name = "Modrinth"
+				url = "https://api.modrinth.com/maven"
+			}
+		}
+		filter {
+			includeGroup "maven.modrinth"
+		}
+	}
+}
+
 dependencies {
 	minecraft "com.mojang:minecraft:${project.minecraft_version}"
 	mappings loom.officialMojangMappings()
 	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
 	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+
+	// HeroBot fake players (the bots Quantum's PvP Practice map uses) as sparring partners in
+	// runClient and the gametests. Only on the dev runtime classpath, never shipped with the mod.
+	modLocalRuntime "maven.modrinth:herobot:${project.herobot_version}"
 }
 
 fabricApi {
@@ -25,6 +43,18 @@ fabricApi {
 		enableGameTests = false
 		enableClientGameTests = true
 		eula = true
+	}
+}
+
+loom {
+	runs {
+		configureEach {
+			if (name == "clientGameTest") {
+				// HeroBot handles its fake players' packets itself, which the gametest network
+				// synchronizer cannot track.
+				vmArg "-Dfabric.client.gametest.disableNetworkSynchronizer=true"
+			}
+		}
 	}
 }
 

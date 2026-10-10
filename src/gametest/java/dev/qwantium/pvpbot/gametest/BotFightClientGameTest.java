@@ -46,6 +46,15 @@ public class BotFightClientGameTest implements FabricClientGameTest {
 			winsAgainstFightingHusk(context, server);
 			eatsGoldenAppleWhenLow(context, server);
 			doesNotWalkIntoLava(context, server);
+
+			HeroBotDuel duel = new HeroBotDuel(context, server);
+			for (Difficulty difficulty : new Difficulty[] {Difficulty.NORMAL, Difficulty.HARD, Difficulty.QUANTUM}) {
+				HeroBotDuel.Result result = duel.play(difficulty, 3);
+				if (result.wins() + result.losses() == 0) {
+					throw new AssertionError("No one died in any " + difficulty.id() + " duel round; the bot is not fighting players");
+				}
+			}
+			duel.remove();
 		}
 
 		allowedOnServerWithMod(context);

@@ -90,9 +90,11 @@ Der Bot benutzt nur Items aus der **Hotbar** (1–9), wie ein Spieler im Kampf a
 
 ```
 ./gradlew build                 # Mod-Jar landet in build/libs/
-./gradlew runClient             # Minecraft mit der Mod starten
+./gradlew runClient             # Minecraft mit der Mod (und HeroBot als Sparringspartner) starten
 ./gradlew runClientGameTest     # automatischer Test im echten Spiel
 ```
+
+[HeroBot](https://modrinth.com/mod/herobot), die Fake-Spieler-Mod, die auch Quantums Map benutzt, ist nur in diesen Testläufen dabei. In der fertigen Jar ist sie nicht enthalten.
 
 Der automatische Test (`src/gametest`) erstellt eine Testwelt und prüft:
 
@@ -101,3 +103,14 @@ Der automatische Test (`src/gametest`) erstellt eine Testwelt und prüft:
 - er isst bei wenig Leben einen Gapple
 - er läuft nicht in einen Lavagraben
 - ein Server mit der Mod erlaubt den Bot
+- Duelle gegen einen HeroBot-Spieler mit perfektem Zielen, Dauersprint und einem Schlag alle 12 Ticks (je 3 Runden auf Normal, Schwer und Quantum; der Punktestand steht im Log)
+
+## Zusammen mit Quantum's PvP Practice testen
+
+1. Minecraft 1.21.11 mit Fabric, dazu im `mods`-Ordner:
+   - Fabric API
+   - [HeroBot](https://modrinth.com/mod/herobot) 1.21.11
+   - diese Mod
+2. Quantums Map (v1.18 für 1.21.11) in den `saves`-Ordner entpacken und öffnen.
+3. In der Map einen **Schwert- oder Axt-Kit** wählen und den Kampf starten. Unser Bot kann noch keine Crystals, Mace, Speere oder Bögen.
+4. Den Quantum-Bot anschauen und **H** drücken, damit unser Bot nur ihn angreift und nicht andere Fake-Spieler in der Lobby. Dann **R** drücken.
