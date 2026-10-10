@@ -23,6 +23,10 @@ public final class ClientConfig {
 	/** Player name used when {@link #targetMode} is {@link TargetMode#PLAYER}. */
 	public String targetName = "";
 	public boolean autoRespawn = true;
+	/** Quantum's item tricks: cobwebs on the opponent, water against cobwebs and fire, lava. */
+	public boolean useCobwebs = true;
+	public boolean useWater = true;
+	public boolean useLava = true;
 	/** Blocks around you in which the bot looks for opponents. */
 	public double searchRange = 24.0;
 

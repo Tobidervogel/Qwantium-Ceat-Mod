@@ -52,6 +52,10 @@ final class BotCommands {
 			.then(literal("quantum")
 				.then(literal("on").executes(context -> quantum(context.getSource(), true)))
 				.then(literal("off").executes(context -> quantum(context.getSource(), false))))
+			.then(literal("utility")
+				.then(utilityToggle("cobweb"))
+				.then(utilityToggle("water"))
+				.then(utilityToggle("lava")))
 			.then(literal("autorespawn")
 				.then(argument("enabled", BoolArgumentType.bool()).executes(context -> {
 					ClientConfig config = config();
@@ -69,6 +73,22 @@ final class BotCommands {
 					context.getSource().sendFeedback(Component.translatable("qwantiumbot.msg.range", (int) config.searchRange));
 					return Command.SINGLE_SUCCESS;
 				}))));
+	}
+
+	private static com.mojang.brigadier.builder.LiteralArgumentBuilder<FabricClientCommandSource> utilityToggle(String name) {
+		return literal(name).then(argument("enabled", BoolArgumentType.bool()).executes(context -> {
+			ClientConfig config = config();
+			boolean enabled = BoolArgumentType.getBool(context, "enabled");
+			switch (name) {
+				case "cobweb" -> config.useCobwebs = enabled;
+				case "water" -> config.useWater = enabled;
+				default -> config.useLava = enabled;
+			}
+			config.save();
+			context.getSource().sendFeedback(Component.translatable("qwantiumbot.msg.utility",
+				Component.translatable("qwantiumbot.utility." + name), enabled ? CommonComponents.OPTION_ON : CommonComponents.OPTION_OFF));
+			return Command.SINGLE_SUCCESS;
+		}));
 	}
 
 	private static ClientConfig config() {

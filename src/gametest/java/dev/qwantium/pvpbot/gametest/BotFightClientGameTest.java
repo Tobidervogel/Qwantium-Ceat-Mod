@@ -12,6 +12,9 @@ import net.fabricmc.fabric.api.client.gametest.v1.context.TestServerConnection;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestServerContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestSingleplayerContext;
 import net.minecraft.client.Minecraft;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.monster.zombie.Husk;
 import net.minecraft.world.item.Items;
@@ -50,10 +53,13 @@ public class BotFightClientGameTest implements FabricClientGameTest {
 			winsAgainstFightingHusk(context, server);
 			eatsGoldenAppleWhenLow(context, server);
 			doesNotWalkIntoLava(context, server);
+			escapesCobwebWithWater(context, server);
+			throwsCobwebAtKnockedBackOpponent(context, server);
+			poursLavaUnderAirborneOpponent(context, server);
 
 			HeroBotDuel duel = new HeroBotDuel(context, server);
 			for (Difficulty difficulty : new Difficulty[] {Difficulty.NORMAL, Difficulty.HARD, Difficulty.CRAZY, Difficulty.QUANTUM}) {
-				HeroBotDuel.Result result = duel.play(difficulty, 3);
+				HeroBotDuel.Result result = duel.play(difficulty, Integer.getInteger("qwantiumbot.duelRounds", 3));
 				if (result.wins() + result.losses() == 0) {
 					throw new AssertionError("No one died in any " + difficulty.id() + " duel round; the bot is not fighting players");
 				}
@@ -183,6 +189,130 @@ public class BotFightClientGameTest implements FabricClientGameTest {
 		if (!offAfterLeaving) {
 			throw new AssertionError("Bot should switch off when leaving the server");
 		}
+	}
+
+	/**
+	 * Stuck in a cage of cobwebs (too thick to just walk out of), the bot pours water at its feet to
+	 * wash them away and scoops the water back up.
+	 */
+	private static void escapesCobwebWithWater(ClientGameTestContext context, TestServerContext server) {
+		resetArena(context, server);
+		server.runCommand("item replace entity @p hotbar.0 with minecraft:diamond_sword");
+		server.runCommand("item replace entity @p hotbar.7 with minecraft:water_bucket");
+		server.runCommand("fill -1 " + GROUND_Y + " -1 1 " + (GROUND_Y + 1) + " 1 minecraft:cobweb");
+		server.runCommand("summon minecraft:husk 0 " + GROUND_Y + " 8 {NoAI:1b,PersistenceRequired:1b}");
+		context.waitTicks(5);
+
+		setBot(context, true);
+		int poured = waitOrExplain(context, "pour water", minecraft -> minecraft.player.getInventory().getItem(7).is(Items.BUCKET), 200);
+		int scooped = waitOrExplain(context, "scoop the water back up",
+			minecraft -> minecraft.player.getInventory().getItem(7).is(Items.WATER_BUCKET) && !inCobweb(minecraft), 200);
+		setBot(context, false);
+		server.runCommand("fill -2 " + GROUND_Y + " -2 2 " + (GROUND_Y + 2) + " 2 minecraft:air replace minecraft:cobweb");
+		System.out.println("[qwantiumbot-gametest] poured water in the cobweb cage after " + poured + " ticks, free and scooped it back after " + scooped + " more");
+	}
+
+	private static boolean inCobweb(Minecraft minecraft) {
+		return minecraft.level.getBlockState(minecraft.player.blockPosition()).is(Blocks.COBWEB)
+			|| minecraft.level.getBlockState(BlockPos.containing(minecraft.player.getEyePosition())).is(Blocks.COBWEB);
+	}
+
+	/** After a hit knocks the opponent back and up, a cobweb lands under them. */
+	private static void throwsCobwebAtKnockedBackOpponent(ClientGameTestContext context, TestServerContext server) {
+		resetArena(context, server);
+		setUtilities(context, true, true, false);
+		server.runCommand("item replace entity @p hotbar.0 with minecraft:diamond_sword");
+		server.runCommand("item replace entity @p hotbar.2 with minecraft:cobweb 64");
+		server.runCommand("item replace entity @p armor.chest with minecraft:diamond_chestplate");
+		// The long fight against a tanky husk is about the item trick, not about surviving it.
+		server.runCommand("effect give @p minecraft:resistance 60 4 true");
+		server.runCommand("summon minecraft:husk 0 " + GROUND_Y + " 6 {PersistenceRequired:1b,Health:1000f,attributes:[{id:\"minecraft:max_health\",base:1000}]}");
+		context.waitTicks(5);
+
+		setBot(context, true);
+		int ticks = waitOrExplain(context, "throw a cobweb", minecraft -> countBlocks(minecraft, Blocks.COBWEB) > 0, 600);
+		setBot(context, false);
+		System.out.println("[qwantiumbot-gametest] threw a cobweb at the opponent after " + ticks + " ticks");
+		server.runCommand("fill -40 " + GROUND_Y + " -40 40 " + (GROUND_Y + 3) + " 40 minecraft:air replace minecraft:cobweb");
+		setUtilities(context, true, true, true);
+	}
+
+	/** An opponent knocked into the air gets lava under them; the bot picks it up again later. */
+	private static void poursLavaUnderAirborneOpponent(ClientGameTestContext context, TestServerContext server) {
+		resetArena(context, server);
+		setUtilities(context, false, true, true);
+		server.runCommand("item replace entity @p hotbar.0 with minecraft:diamond_sword");
+		server.runCommand("item replace entity @p hotbar.8 with minecraft:lava_bucket");
+		server.runCommand("item replace entity @p armor.chest with minecraft:diamond_chestplate");
+		// The long fight against a tanky husk is about the item trick, not about surviving it.
+		server.runCommand("effect give @p minecraft:resistance 60 4 true");
+		server.runCommand("summon minecraft:husk 0 " + GROUND_Y + " 6 {PersistenceRequired:1b,Health:1000f,attributes:[{id:\"minecraft:max_health\",base:1000}]}");
+		context.waitTicks(5);
+
+		setBot(context, true);
+		int ticks = waitOrExplain(context, "pour lava", minecraft -> countBlocks(minecraft, Blocks.LAVA) > 0, 600);
+		// Like Quantum's bot it only scoops lava up again while it is in reach, so this is not required.
+		int pickedUp = -1;
+		for (int tick = 0; tick < 200 && pickedUp < 0; tick++) {
+			context.waitTick();
+			if (context.computeOnClient(minecraft -> minecraft.player.getInventory().getItem(8).is(Items.LAVA_BUCKET))) {
+				pickedUp = tick;
+			}
+		}
+		setBot(context, false);
+		System.out.println("[qwantiumbot-gametest] poured lava under the opponent after " + ticks + " ticks, "
+			+ (pickedUp >= 0 ? "picked it up after " + pickedUp + " more" : "fight moved away before picking it up"));
+		server.runCommand("kill @e[type=minecraft:husk]");
+		server.runCommand("fill -40 " + GROUND_Y + " -40 40 " + (GROUND_Y + 3) + " 40 minecraft:air replace minecraft:lava");
+		setUtilities(context, true, true, true);
+	}
+
+	/** Waits like {@code waitFor}, but explains the bot's state when it times out. */
+	private static int waitOrExplain(ClientGameTestContext context, String goal, java.util.function.Predicate<Minecraft> done, int timeout) {
+		for (int tick = 0; tick <= timeout; tick++) {
+			if (context.computeOnClient(done::test)) {
+				return tick;
+			}
+			context.waitTick();
+		}
+		String state = context.computeOnClient(minecraft -> {
+			StringBuilder blocks = new StringBuilder();
+			BlockPos feet = minecraft.player.blockPosition();
+			for (int dy = -1; dy <= 2; dy++) {
+				blocks.append(dy).append('=').append(minecraft.level.getBlockState(feet.above(dy)).getBlock().getDescriptionId()).append(' ');
+			}
+			return String.format("pos %s rot %.0f/%.0f slot %d holding %s hit %s engaged %s blocks %s",
+				minecraft.player.blockPosition().toShortString(), minecraft.player.getYRot(), minecraft.player.getXRot(),
+				minecraft.player.getInventory().getSelectedSlot(), minecraft.player.getMainHandItem(), minecraft.hitResult == null ? null : minecraft.hitResult.getType(),
+				BotController.get().isEngaged(), blocks);
+		});
+		context.takeScreenshot("qwantiumbot_timeout");
+		throw new AssertionError("Bot did not " + goal + " within " + timeout + " ticks: " + state);
+	}
+
+	private static void setUtilities(ClientGameTestContext context, boolean cobwebs, boolean water, boolean lava) {
+		context.runOnClient(minecraft -> {
+			ClientConfig config = BotController.get().config();
+			config.useCobwebs = cobwebs;
+			config.useWater = water;
+			config.useLava = lava;
+		});
+	}
+
+	private static boolean blockIs(Minecraft minecraft, int x, int y, int z, Block block) {
+		return minecraft.level.getBlockState(new BlockPos(x, y, z)).is(block);
+	}
+
+	/** Counts blocks of a kind around the player (the fight moves around the arena). */
+	private static int countBlocks(Minecraft minecraft, Block block) {
+		int count = 0;
+		BlockPos center = minecraft.player.blockPosition();
+		for (BlockPos pos : BlockPos.betweenClosed(center.getX() - 10, GROUND_Y, center.getZ() - 10, center.getX() + 10, GROUND_Y + 3, center.getZ() + 10)) {
+			if (minecraft.level.getBlockState(pos).is(block)) {
+				count++;
+			}
+		}
+		return count;
 	}
 
 	private static void resetArena(ClientGameTestContext context, TestServerContext server) {

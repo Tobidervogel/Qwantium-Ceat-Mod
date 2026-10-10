@@ -1,10 +1,12 @@
 package dev.qwantium.pvpbot;
 
+import dev.qwantium.pvpbot.command.KitCommand;
 import dev.qwantium.pvpbot.network.BotPermissionPayload;
 import dev.qwantium.pvpbot.network.QuantumControlPayload;
 import dev.qwantium.pvpbot.network.QuantumControlRequestPayload;
 import dev.qwantium.pvpbot.quantum.QuantumBridge;
 import net.fabricmc.api.ModInitializer;
+import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
@@ -38,5 +40,6 @@ public class QwantiumBotMod implements ModInitializer {
 			}
 		});
 		QuantumBridge.init(config);
+		CommandRegistrationCallback.EVENT.register((dispatcher, buildContext, environment) -> KitCommand.register(dispatcher));
 	}
 }

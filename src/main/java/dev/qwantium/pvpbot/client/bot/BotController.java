@@ -96,6 +96,7 @@ public final class BotController {
 	private int offhandCooldown;
 	private boolean holdingUse;
 	private int deadTicks;
+	private final Utilities utilities = new Utilities(this.random);
 
 	/** True while Quantum's bot plays this player through the Quantum bridge. */
 	private boolean remoteEngaged;
@@ -262,6 +263,7 @@ public final class BotController {
 		this.aimOffset = null;
 		this.lastFrameNanos = 0L;
 		this.eating = false;
+		this.utilities.reset();
 		this.setUse(minecraft, false);
 	}
 
@@ -391,6 +393,13 @@ public final class BotController {
 		if (!player.isUsingItem() && this.offhandCooldown == 0 && this.manageOffhand(minecraft, player)) {
 			this.offhandCooldown = OFFHAND_SWAP_COOLDOWN;
 			this.move(player, enemy, distance, false);
+			return;
+		}
+
+		// Quantum's item tricks (cobweb, water, lava) take the few ticks they need.
+		if (this.utilities.tick(minecraft, player, enemy, this.realHitCd, inReach, this.config)) {
+			this.setUse(minecraft, false);
+			this.intent = Input.EMPTY;
 			return;
 		}
 
@@ -722,7 +731,7 @@ public final class BotController {
 		LocalPlayer player = minecraft.player;
 		LivingEntity enemy = this.target;
 		Vec3 offset = this.aimOffset;
-		if (!(this.active && this.engaged) || player == null || enemy == null || offset == null) {
+		if (!(this.active && this.engaged) || this.utilities.isBusy() || player == null || enemy == null || offset == null) {
 			this.lastFrameNanos = 0L;
 			return;
 		}
@@ -786,7 +795,7 @@ public final class BotController {
 		this.holdingUse = down;
 	}
 
-	private static void click(KeyMapping key) {
+	static void click(KeyMapping key) {
 		KeyMappingAccessor accessor = (KeyMappingAccessor) key;
 		accessor.qwantium$setClickCount(accessor.qwantium$getClickCount() + 1);
 	}

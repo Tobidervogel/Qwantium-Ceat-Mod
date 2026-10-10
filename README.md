@@ -4,10 +4,20 @@ Fabric-Mod für **Minecraft 1.21.11**: Ein PvP-Trainingsbot, der im Kampf **dein
 
 Es gibt zwei Modi:
 
-- **Eigene Engine** (Taste **R**): Unser Bot spielt im Stil von Quantums Schwert-Bot (Timings, Reichweiten, W/S-Tap, Crits). Er läuft in jeder Welt.
-- **Quantum-Steuerung** (`/qbot quantum on`): In Quantums Map spielt **Quantums eigene Bot-KI** deinen Charakter. Siehe [unten](#quantum-steuerung-quantums-bot-spielt-dich).
+- **Quantum-Bot in der Mod** (Taste **R** an/aus): Das Verhalten von Quantums Bot ist in die Mod nachgebaut und läuft **clientseitig in jeder Welt**, auch in deiner eigenen. Er braucht weder Quantums Map noch HeroBot. Dazu gehören:
+  - Schwertkampf mit Timings, Reichweiten, W/S-Tap und Crits
+  - Spinnweben auf den Gegner
+  - Wasser gegen Spinnweben und Feuer
+  - Lava unter den Gegner
+  - Gapples, Totems, Axt gegen Schild
+- **Quantum-Steuerung** (`/qbot quantum on`): Nur in Quantums Map mit HeroBot. Dort spielt **Quantums originale Bot-KI aus der Map** deinen Charakter, braucht aber einen Gegner. Siehe [unten](#quantum-steuerung-quantums-bot-spielt-dich).
 
-Inoffiziell und nicht mit QuantumUltimate / „Quantum's PvP Practice“ verbunden. In dieser Mod steckt kein Code und keine Datei aus Quantums Map.
+Inoffiziell und nicht mit QuantumUltimate / „Quantum's PvP Practice“ verbunden. Das Verhalten ist nachgebaut; Code oder Dateien aus Quantums Map stecken nicht in der Mod.
+
+**Schnellstart in deiner eigenen Welt** (Cheats an):
+1. `/qwantiumkit` gibt dir Quantums Schwert-Kit: Totems, Spinnweben, Schwert, Gapples, Axt, Perlen, Wasser- und Lava-Eimer.
+2. Gegner suchen, z. B. einen Freund im LAN, oder `/qbot target mobs` für Monster.
+3. **R** drücken.
 
 ## Wo funktioniert der Bot?
 
@@ -55,12 +65,15 @@ Solange der Bot keinen Gegner hat, kannst du ganz normal selbst laufen.
 /qbot target nearest          nächster Spieler (nicht aus deinem Team)
 /qbot target <Spieler>        nur diesen Spieler
 /qbot target mobs             Spieler und feindliche Mobs (zum Alleine-Testen)
+/qbot utility cobweb|water|lava true|false   Quantums Item-Tricks einzeln an/aus
 /qbot quantum on|off          Quantums Map-Bot spielt deinen Charakter (siehe unten)
 /qbot autorespawn true|false  nach dem Tod automatisch respawnen
 /qbot range <4-64>            Suchradius in Blöcken
 ```
 
 Einstellungen werden in `config/qwantiumbot-client.json` gespeichert.
+
+Serverbefehl (braucht Cheats bzw. OP): `/qwantiumkit` ersetzt dein Inventar durch Quantums Schwert-Kit.
 
 ## Schwierigkeiten
 
@@ -84,6 +97,11 @@ Die Stufen entsprechen denen von Quantums Bot. Der Spielstil ist auf allen Stufe
   - Strafen, alle 5 Ticks neu links oder rechts
   - Jump-Reset, wenn er getroffen wird
 - Zielt auf die nächste Stelle der Hitbox
+- Quantums Item-Tricks, per echtem Rechtsklick mit Items aus der Hotbar:
+  - **Spinnweben:** Nach einem Treffer, der den Gegner hoch und aus der Reichweite schleudert, landet eine Spinnwebe dort, wo er aufkommt.
+  - **Wasser:** Steckt er selbst in Spinnweben oder brennt, kippt er Wasser zu seinen Füßen aus und holt es danach zurück in den Eimer.
+  - **Lava:** Ist der Gegner in der Luft, kommt Lava unter ihn. Später holt er sie wieder ein, wenn sie noch in Reichweite ist.
+  - Jeder Trick hat eine Abklingzeit und klappt wie bei Quantum nur bei jedem zweiten Versuch. Einzeln abschaltbar mit `/qbot utility …`.
 - Teammitglieder greift er nur an, wenn im Team Friendly Fire an ist (wie in Quantums Map)
 - Er schlägt nur, wenn das Fadenkreuz wirklich auf dem Gegner ist, mit normaler Reichweite und Attack-Cooldown
 - Schild in der Offhand zwischen den Schlägen, gegen Bögen und Armbrüste, aber nicht gegen Äxte
@@ -99,7 +117,8 @@ Der Bot benutzt nur Items aus der **Hotbar** (1–9), wie ein Spieler im Kampf a
 ## Was (noch) nicht geht
 
 - Kein Pathfinding um Wände und Labyrinthe herum: Er läuft direkt auf den Gegner zu
-- Nur Nahkampf: kein Bogen, keine Crystals, Pearls, Mace oder Speer, keine Blöcke platzieren
+- Kein Bogen, keine Crystals, Perlen, Windladungen, Mace oder Speer. Außer Spinnweben, Wasser und Lava platziert er keine Blöcke.
+- Quantums Datapack schummelt bei ein paar Dingen per Server-Befehl (Blöcke direkt setzen, Inventar auffüllen, unendlich Totems). Das macht unser Bot nicht: Er benutzt nur, was in deiner Hotbar ist.
 - Tränke werden nicht benutzt
 
 ## Selbst bauen

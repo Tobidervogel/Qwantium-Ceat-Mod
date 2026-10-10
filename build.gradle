@@ -59,6 +59,9 @@ loom {
 				if (project.hasProperty("quantumMap")) {
 					vmArg "-Dqwantiumbot.quantumMap=${project.property("quantumMap")}"
 				}
+				if (project.hasProperty("duelRounds")) {
+					vmArg "-Dqwantiumbot.duelRounds=${project.property("duelRounds")}"
+				}
 				if (project.hasProperty("quantumBridgeOnly")) {
 					vmArg "-Dqwantiumbot.quantumBridgeOnly=true"
 				}

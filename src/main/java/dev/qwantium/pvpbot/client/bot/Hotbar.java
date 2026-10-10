@@ -52,6 +52,10 @@ final class Hotbar {
 		return best;
 	}
 
+	static int find(Player player, Item item) {
+		return find(player, stack -> stack.is(item));
+	}
+
 	static int findAxe(Player player) {
 		return find(player, stack -> stack.is(ItemTags.AXES));
 	}

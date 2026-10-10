@@ -24,7 +24,7 @@
   "qwantiumbot.status.off": "off",
   "qwantiumbot.status.allowed": "allowed",
   "qwantiumbot.status.blocked": "not allowed",
-  "qwantiumbot.help": "/qbot on|off|toggle|status\n/qbot difficulty easy|normal|hard|crazy|quantum\n/qbot target nearest|mobs|<player>\n/qbot quantum on|off  (Quantum's map bot plays you)\n/qbot autorespawn true|false\n/qbot range <4-64>\nKeys: R = on/off, H = fight the player you look at, J = difficulty",
+  "qwantiumbot.help": "/qbot on|off|toggle|status\n/qbot difficulty easy|normal|hard|crazy|quantum\n/qbot target nearest|mobs|<player>\n/qbot quantum on|off  (Quantum's map bot plays you)\n/qbot utility cobweb|water|lava true|false\n/qbot autorespawn true|false\n/qbot range <4-64>\nKeys: R = on/off, H = fight the player you look at, J = difficulty",
   "qwantiumbot.hud.fighting": "Qwantium bot: FIGHTING",
   "qwantiumbot.hud.waiting": "Qwantium bot: waiting for an opponent",
   "qwantiumbot.hud.target": "Target: %s (%sm)",
@@ -36,5 +36,11 @@
   "qwantiumbot.quantum.pack_enabled": "Turned on the Qwantium bridge datapack (data reloaded).",
   "qwantiumbot.quantum.requested": "Asking the server for Quantum control...",
   "qwantiumbot.quantum.stopping": "Turning Quantum control off...",
-  "qwantiumbot.hud.quantum": "Quantum control: ACTIVE (/qbot quantum off)"
+  "qwantiumbot.hud.quantum": "Quantum control: ACTIVE (/qbot quantum off)",
+  "qwantiumbot.quantum.no_opponent": "Quantum control needs an opponent in Quantum's map (a second player or /playerspawn). For playing alone in any world, use the bot with R.",
+  "qwantiumbot.msg.utility": "%s: %s",
+  "qwantiumbot.utility.cobweb": "Cobwebs on the opponent",
+  "qwantiumbot.utility.water": "Water against cobwebs and fire",
+  "qwantiumbot.utility.lava": "Lava under the opponent",
+  "qwantiumbot.kit.given": "Got Quantum's sword kit: totems, cobwebs, sword, golden apples, axe, pearls, water and lava buckets."
 }

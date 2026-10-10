@@ -45,6 +45,8 @@ public final class QuantumBridge {
 	public static final String CONTROL_TAG = "qbot_quantum";
 	/** The fake player Quantum's map runs its bot on. */
 	private static final String MAP_BOT = "quantumbot";
+	/** Fake players Quantum's map can spawn as bots. */
+	private static final Set<String> MAP_BOTS = Set.of(MAP_BOT, "Quantum", "Notch", "Herobrine");
 	private static final Identifier PACK_ID = Identifier.fromNamespaceAndPath(QwantiumBotMod.MOD_ID, "quantum_bridge");
 
 	private static final Set<UUID> JUMPED = new HashSet<>();
@@ -95,6 +97,14 @@ public final class QuantumBridge {
 		}
 		if (!heroBotLoaded) {
 			player.displayClientMessage(Component.translatable("qwantiumbot.quantum.no_herobot").withStyle(ChatFormatting.RED), false);
+			return;
+		}
+
+		// Quantum's map needs someone to fight; alone it would end every round at once.
+		boolean opponentPresent = player.level().getServer().getPlayerList().getPlayers().stream()
+			.anyMatch(other -> other != player && !other.isSpectator() && !MAP_BOTS.contains(other.getScoreboardName()));
+		if (!opponentPresent) {
+			player.displayClientMessage(Component.translatable("qwantiumbot.quantum.no_opponent").withStyle(ChatFormatting.RED), false);
 			return;
 		}
 

@@ -24,7 +24,7 @@
   "qwantiumbot.status.off": "aus",
   "qwantiumbot.status.allowed": "erlaubt",
   "qwantiumbot.status.blocked": "nicht erlaubt",
-  "qwantiumbot.help": "/qbot on|off|toggle|status\n/qbot difficulty easy|normal|hard|crazy|quantum\n/qbot target nearest|mobs|<Spieler>\n/qbot quantum on|off  (Quantums Map-Bot spielt dich)\n/qbot autorespawn true|false\n/qbot range <4-64>\nTasten: R = an/aus, H = angeschauten Spieler bekämpfen, J = Schwierigkeit",
+  "qwantiumbot.help": "/qbot on|off|toggle|status\n/qbot difficulty easy|normal|hard|crazy|quantum\n/qbot target nearest|mobs|<Spieler>\n/qbot quantum on|off  (Quantums Map-Bot spielt dich)\n/qbot utility cobweb|water|lava true|false\n/qbot autorespawn true|false\n/qbot range <4-64>\nTasten: R = an/aus, H = angeschauten Spieler bekämpfen, J = Schwierigkeit",
   "qwantiumbot.hud.fighting": "Qwantium-Bot: KÄMPFT",
   "qwantiumbot.hud.waiting": "Qwantium-Bot: wartet auf Gegner",
   "qwantiumbot.hud.target": "Ziel: %s (%sm)",
@@ -36,5 +36,11 @@
   "qwantiumbot.quantum.pack_enabled": "Das Qwantium-Brücken-Datapack wurde eingeschaltet (Daten neu geladen).",
   "qwantiumbot.quantum.requested": "Frage den Server nach Quantum-Steuerung...",
   "qwantiumbot.quantum.stopping": "Schalte die Quantum-Steuerung aus...",
-  "qwantiumbot.hud.quantum": "Quantum-Steuerung: AKTIV (/qbot quantum off)"
+  "qwantiumbot.hud.quantum": "Quantum-Steuerung: AKTIV (/qbot quantum off)",
+  "qwantiumbot.quantum.no_opponent": "Für die Quantum-Steuerung braucht Quantums Map einen Gegner (zweiter Spieler oder /playerspawn). Zum Alleine-Spielen in jeder Welt: den Bot mit R.",
+  "qwantiumbot.msg.utility": "%s: %s",
+  "qwantiumbot.utility.cobweb": "Spinnweben auf den Gegner",
+  "qwantiumbot.utility.water": "Wasser gegen Spinnweben und Feuer",
+  "qwantiumbot.utility.lava": "Lava unter den Gegner",
+  "qwantiumbot.kit.given": "Quantums Schwert-Kit erhalten: Totems, Spinnweben, Schwert, Goldäpfel, Axt, Perlen, Wasser- und Lava-Eimer."
 }
