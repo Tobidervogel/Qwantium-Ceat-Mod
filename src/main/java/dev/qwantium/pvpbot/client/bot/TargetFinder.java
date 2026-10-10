@@ -53,7 +53,10 @@ final class TargetFinder {
 		if (entity instanceof Player player && player.isCreative()) {
 			return false;
 		}
-		if (self.isAlliedTo(entity) || self.distanceToSqr(entity) > range * range) {
+		// Teammates only count as allies when friendly fire is off. Quantum's map puts everyone,
+		// bots included, into one team with friendly fire on.
+		boolean ally = entity instanceof Player player ? !self.canHarmPlayer(player) : self.isAlliedTo(entity);
+		if (ally || self.distanceToSqr(entity) > range * range) {
 			return false;
 		}
 		return !needsSight || self.hasLineOfSight(entity);

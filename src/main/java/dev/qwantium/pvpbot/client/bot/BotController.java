@@ -28,12 +28,29 @@ import org.jspecify.annotations.Nullable;
  * presses movement keys, clicks to attack when the crosshair is on the opponent and holds right click
  * to block or eat. Nothing is sent to the server that a player could not do by hand.
  *
+ * <p>The fighting style follows the sword bot of Quantum's PvP Practice: after every hit it rolls a
+ * new reach, aim lag and play style (sprint-hit combo or jump crit, strafing or not), backs off for a
+ * few ticks after landing a hit (S-tap), keeps its distance when too close (W-tap), jump-resets when
+ * hit and re-rolls its strafe direction every 5 ticks.
+ *
  * <p>{@link #tick} runs at the start of every client tick (before vanilla handles keys and moves the
  * player); {@link #onFrame} runs every frame so the camera turns smoothly.
  */
 public final class BotController {
 	private static final BotController INSTANCE = new BotController();
 
+	/** Ticks between swings: the next swing comes this many ticks + 1 after a hit. */
+	private static final int HIT_COOLDOWN = 11;
+	/** Crit style: jump once the hit cooldown is down to this (two ticks after a hit). */
+	private static final int CRIT_JUMP_COOLDOWN = 9;
+	/** S-tap: walk backwards while the time since our own hit is at least this. */
+	private static final int S_TAP_FROM = 7;
+	/** W-tap: stop walking forward when the opponent is this close (feet to feet). */
+	private static final double TOO_CLOSE = 1.8;
+	private static final int STRAFE_REROLL_TICKS = 5;
+	/** A crit is skipped for a normal hit when the bot has waited this long in the air. */
+	private static final int MAX_CRIT_WAIT_TICKS = 6;
+	private static final double MAX_REACH = 3.0;
 	/** Health (half hearts) at which a totem is moved into the offhand. */
 	private static final float TOTEM_HEALTH = 8.0F;
 	/** Health at which the bot eats even while the opponent is right in front of it. */
@@ -42,7 +59,6 @@ public final class BotController {
 	private static final int RESPAWN_DELAY_TICKS = 30;
 	private static final int OFFHAND_SWAP_COOLDOWN = 10;
 	private static final int MAX_EAT_TICKS = 60;
-	private static final int MAX_CRIT_WAIT_TICKS = 12;
 
 	private final RandomSource random = RandomSource.create();
 	private ClientConfig config = new ClientConfig();
@@ -50,25 +66,25 @@ public final class BotController {
 	private boolean active;
 	private boolean engaged;
 	private @Nullable LivingEntity target;
-	private int engagedTicks;
 	private Input intent = Input.EMPTY;
 
 	// aim
 	private @Nullable Vec3 aimOffset;
-	private Vec3 jitter = Vec3.ZERO;
-	private Vec3 jitterGoal = Vec3.ZERO;
-	private int jitterTicks;
+	private int aimLag = 1;
 	private long lastFrameNanos;
 
-	// fighting
-	private double nextCharge = 1.0;
-	private boolean strafing;
-	private int strafeDir = 1;
-	private int strafeTicks;
-	private int wTapTicks;
-	private boolean critPlanned;
+	// fighting (names follow the scoreboards of Quantum's datapack)
+	private int hitCd;
+	private int realHitCd;
+	private double tempReach = MAX_REACH;
+	private boolean critStyle;
+	private boolean strafeOn;
+	private boolean shieldOn;
+	private boolean strafeLeft;
+	private int strafeCd;
 	private int critWaitTicks;
-	private int blockTicks;
+	private int lastHurtTime;
+	private boolean sprintingLastTick;
 	private int stuckTicks;
 
 	// items
@@ -201,18 +217,18 @@ public final class BotController {
 		if (!this.engaged || next != this.target) {
 			this.engage(next);
 		}
-		this.engagedTicks++;
 		this.fight(minecraft, player, next);
+		this.lastHurtTime = player.hurtTime;
+		this.sprintingLastTick = player.isSprinting();
 	}
 
 	private void engage(LivingEntity newTarget) {
 		this.engaged = true;
 		this.target = newTarget;
-		this.engagedTicks = 0;
 		this.aimOffset = null;
-		this.critPlanned = false;
-		this.blockTicks = 0;
-		this.nextCharge = this.rollCharge();
+		this.hitCd = 0;
+		this.realHitCd = 0;
+		this.rollPlayStyle();
 	}
 
 	private void disengage(Minecraft minecraft) {
@@ -226,8 +242,6 @@ public final class BotController {
 		this.aimOffset = null;
 		this.lastFrameNanos = 0L;
 		this.eating = false;
-		this.blockTicks = 0;
-		this.wTapTicks = 0;
 		this.setUse(minecraft, false);
 	}
 
@@ -246,24 +260,60 @@ public final class BotController {
 		}
 	}
 
-	private void fight(Minecraft minecraft, LocalPlayer player, LivingEntity enemy) {
+	/** Rolls reach, aim lag and play style for the next hit, like Quantum's bot does after every hit. */
+	private void rollPlayStyle() {
 		Difficulty difficulty = this.config.difficulty;
+		int reach = difficulty.reachBase;
+		for (int trial = 0; trial < 9 && reach < 30; trial++) {
+			if (this.random.nextBoolean()) {
+				reach++;
+			}
+		}
+		this.tempReach = Math.min(reach / 10.0, MAX_REACH);
+
+		int lag = difficulty.aimBase;
+		for (int trial = 0; trial < 4 && lag > 1; trial++) {
+			if (this.random.nextBoolean()) {
+				lag--;
+			}
+		}
+		this.aimLag = Math.max(1, lag);
+
+		this.critStyle = this.random.nextBoolean();
+		this.strafeOn = this.random.nextBoolean();
+		this.shieldOn = this.random.nextBoolean();
+	}
+
+	private void fight(Minecraft minecraft, LocalPlayer player, LivingEntity enemy) {
+		if (this.hitCd > -100) {
+			this.hitCd--;
+		}
+		if (this.realHitCd > 0) {
+			this.realHitCd--;
+		}
+		if (this.strafeCd > 0) {
+			this.strafeCd--;
+		}
 		if (this.offhandCooldown > 0) {
 			this.offhandCooldown--;
 		}
 
-		this.updateAim(player, enemy, difficulty);
+		this.updateAim(player, enemy);
 
 		double distance = player.distanceTo(enemy);
-		double reach = player.entityInteractionRange();
-		boolean inReach = enemy.getBoundingBox().distanceToSqr(player.getEyePosition()) <= reach * reach;
+		double reachToBox = Math.sqrt(enemy.getBoundingBox().distanceToSqr(player.getEyePosition()));
+		boolean inReach = reachToBox < this.tempReach && player.hasLineOfSight(enemy);
+		// Keep backing off one tick longer while the opponent is in reach (Quantum's spacing).
+		if (this.hitCd == 6 && inReach) {
+			this.realHitCd++;
+		}
 
 		if (this.eating) {
 			this.continueEating(minecraft, player, enemy);
 			return;
 		}
 
-		if (this.shouldEat(player, distance, difficulty)) {
+		if (this.shouldEat(player, distance)) {
 			this.startEating(minecraft, player);
 			this.continueEating(minecraft, player, enemy);
 			return;
@@ -271,24 +321,24 @@ public final class BotController {
 
 		if (!player.isUsingItem() && this.offhandCooldown == 0 && this.manageOffhand(minecraft, player)) {
 			this.offhandCooldown = OFFHAND_SWAP_COOLDOWN;
-			this.move(player, enemy, distance, reach, false, difficulty);
+			this.move(player, enemy, distance, false);
 			return;
 		}
 
-		boolean breakShield = this.chooseWeapon(player, enemy, difficulty);
-		boolean block = this.decideBlock(player, enemy, distance, difficulty);
+		boolean breakShield = this.chooseWeapon(player, enemy);
+		boolean block = this.decideBlock(player, enemy, distance);
 		this.setUse(minecraft, block);
-		this.move(player, enemy, distance, reach, block, difficulty);
+		this.move(player, enemy, distance, block);
 		if (!block) {
-			this.tryAttack(minecraft, player, enemy, inReach, breakShield, difficulty);
+			this.tryAttack(minecraft, player, enemy, inReach, breakShield);
 		}
 	}
 
 	// ------------------------------------------------------------------------------------------
 	// Attacking
 
-	private void tryAttack(Minecraft minecraft, LocalPlayer player, LivingEntity enemy, boolean inReach, boolean breakShield, Difficulty difficulty) {
-		if (!inReach || player.isUsingItem() || this.engagedTicks < difficulty.reactionTicks) {
+	private void tryAttack(Minecraft minecraft, LocalPlayer player, LivingEntity enemy, boolean inReach, boolean breakShield) {
+		if (!inReach || player.isUsingItem()) {
 			return;
 		}
 		// Only swing when the crosshair is really on the opponent, exactly like a player clicking.
@@ -298,51 +348,36 @@ public final class BotController {
 
 		// An axe disables a raised shield no matter how charged the swing is.
 		if (!breakShield) {
-			if (player.getAttackStrengthScale(0.5F) < this.nextCharge) {
+			if (this.hitCd > 0 || player.getAttackStrengthScale(0.5F) < 0.9F) {
 				return;
 			}
 
-			if (this.critPlanned) {
-				boolean falling = !player.onGround() && player.getDeltaMovement().y < -0.08 && !player.isSprinting();
-				if (!falling && this.critWaitTicks++ < MAX_CRIT_WAIT_TICKS) {
+			if (this.critStyle && !player.onGround()) {
+				// The server must already see us not sprinting, so the swing comes a tick after
+				// the sprint was dropped.
+				boolean falling = player.getDeltaMovement().y < 0.0 && player.fallDistance > 0.1;
+				if (!(falling && !this.sprintingLastTick && !player.isSprinting()) && this.critWaitTicks++ < MAX_CRIT_WAIT_TICKS) {
 					return;
 				}
 			}
 		}
 
 		click(minecraft.options.keyAttack);
-		this.afterAttack(player, difficulty);
-	}
-
-	private void afterAttack(LocalPlayer player, Difficulty difficulty) {
-		this.nextCharge = this.rollCharge();
+		this.hitCd = HIT_COOLDOWN;
+		this.realHitCd = HIT_COOLDOWN;
 		this.critWaitTicks = 0;
-		this.critPlanned = this.random.nextDouble() < difficulty.critChance;
-		if (player.isSprinting() && this.random.nextDouble() < difficulty.wTapChance) {
-			this.wTapTicks = 2;
-		}
-
-		if (this.canBlock(player) && this.random.nextDouble() < difficulty.shieldChance) {
-			// Raise the shield between hits and drop it a moment before the next swing is charged.
-			int ticksToCharge = Mth.ceil(player.getCurrentItemAttackStrengthDelay() * this.nextCharge);
-			this.blockTicks = Math.max(0, ticksToCharge - 3);
-		}
-	}
-
-	private double rollCharge() {
-		Difficulty difficulty = this.config.difficulty;
-		return Mth.lerp(this.random.nextDouble(), difficulty.minCharge, difficulty.maxCharge);
+		this.rollPlayStyle();
 	}
 
 	/** Selects the weapon to fight with. Returns true when it switched to an axe to break a shield. */
-	private boolean chooseWeapon(LocalPlayer player, LivingEntity enemy, Difficulty difficulty) {
+	private boolean chooseWeapon(LocalPlayer player, LivingEntity enemy) {
 		if (player.isUsingItem()) {
 			return false;
 		}
 
 		int slot = Hotbar.bestWeapon(player);
 		boolean breakShield = false;
-		if (difficulty != Difficulty.EASY && isShieldUp(enemy)) {
+		if (isShieldUp(enemy)) {
 			int axe = Hotbar.findAxe(player);
 			if (axe >= 0) {
 				slot = axe;
@@ -367,29 +402,23 @@ public final class BotController {
 			&& (mainHand.isEmpty() || Hotbar.isMeleeWeapon(mainHand));
 	}
 
-	private boolean decideBlock(LocalPlayer player, LivingEntity enemy, double distance, Difficulty difficulty) {
+	private boolean decideBlock(LocalPlayer player, LivingEntity enemy, double distance) {
 		if (!this.canBlock(player)) {
-			this.blockTicks = 0;
 			return false;
 		}
 
 		// Arrows and tridents: keep the shield up while the opponent aims from range.
-		if (distance > 5.0 && difficulty.shieldChance > 0.0 && isAimingProjectile(enemy)) {
+		if (distance > 5.0 && isAimingProjectile(enemy)) {
 			return true;
 		}
 
-		// An axe would just disable the shield, so a good player does not block against one.
-		if (difficulty != Difficulty.EASY && enemy.getMainHandItem().is(ItemTags.AXES)) {
-			this.blockTicks = 0;
+		// An axe would just disable the shield, so do not block against one.
+		if (!this.shieldOn || enemy.getMainHandItem().is(ItemTags.AXES) || !player.onGround()) {
 			return false;
 		}
 
-		if (this.blockTicks > 0 && distance < 5.0) {
-			this.blockTicks--;
-			return true;
-		}
-		this.blockTicks = 0;
-		return false;
+		// Shield up between hits, down two ticks before the next swing.
+		return distance < 5.0 && this.realHitCd >= 3 && this.realHitCd <= 10;
 	}
 
 	/** Moves a totem (when low) or a shield (when empty) into the offhand with the swap-hands key. */
@@ -414,8 +443,8 @@ public final class BotController {
 		return true;
 	}
 
-	private boolean shouldEat(LocalPlayer player, double distance, Difficulty difficulty) {
-		if (player.getHealth() <= difficulty.eatHealth && Hotbar.findGoldenApple(player) >= 0) {
+	private boolean shouldEat(LocalPlayer player, double distance) {
+		if (player.getHealth() <= this.config.difficulty.eatHealth && Hotbar.findGoldenApple(player) >= 0) {
 			return distance > 3.2 || player.getHealth() <= PANIC_EAT_HEALTH;
 		}
 		return player.getFoodData().getFoodLevel() <= HUNGRY_FOOD_LEVEL && distance > 6.0 && Hotbar.findFood(player) >= 0;
@@ -434,7 +463,6 @@ public final class BotController {
 		this.eating = true;
 		this.eatSlot = slot;
 		this.eatTicks = 0;
-		this.blockTicks = 0;
 		this.setUse(minecraft, true);
 	}
 
@@ -458,68 +486,61 @@ public final class BotController {
 	// ------------------------------------------------------------------------------------------
 	// Movement
 
-	private void move(LocalPlayer player, LivingEntity enemy, double distance, double reach, boolean blocking, Difficulty difficulty) {
-		this.updateStrafe(difficulty);
-
-		boolean forward;
+	private void move(LocalPlayer player, LivingEntity enemy, double distance, boolean blocking) {
+		boolean onGround = player.onGround();
+		boolean forward = true;
+		boolean sprint = true;
 		boolean backward = false;
-		int strafe = 0;
-		boolean sprint;
 		boolean jump = false;
 
-		if (distance > reach + 0.6) {
-			// Chase. A little zig-zag on harder levels makes the bot harder to hit on approach.
-			forward = true;
-			sprint = true;
-			if (this.strafing && difficulty.strafeChance >= 0.6 && distance < 10.0) {
-				strafe = this.strafeDir;
+		// Jump reset: hop the moment we get hit to take less knockback.
+		if (player.hurtTime > this.lastHurtTime && onGround) {
+			jump = true;
+		}
+
+		if (this.critStyle) {
+			// Jump two ticks after a hit so the bot is falling when the next swing is ready.
+			if (onGround && this.hitCd <= CRIT_JUMP_COOLDOWN) {
+				jump = true;
+			}
+			// Drop the sprint while falling into the hit: a sprinting hit cannot crit.
+			if (!onGround && player.getDeltaMovement().y < 0.0 && this.hitCd <= 1) {
+				sprint = false;
+				player.setSprinting(false);
 			}
 		} else {
-			// In range: keep the pressure on and circle the opponent.
-			forward = distance > 1.6;
-			sprint = forward;
-			if (this.strafing) {
-				strafe = this.strafeDir;
+			// W-tap: do not walk into the opponent. S-tap: back off right after landing a hit.
+			if (distance <= TOO_CLOSE) {
+				forward = false;
 			}
-			if (distance < 1.0) {
+			if (this.realHitCd >= S_TAP_FROM) {
 				forward = false;
 				backward = true;
 			}
 		}
 
-		// W-tap: let go of forward for a moment after a hit so the next hit gets sprint knockback again.
-		if (this.wTapTicks > 0) {
-			this.wTapTicks--;
-			forward = false;
-			sprint = false;
+		int strafe = 0;
+		if (onGround && this.strafeCd <= 0) {
+			this.strafeCd = STRAFE_REROLL_TICKS;
+			this.strafeLeft = this.random.nextBoolean();
 		}
-
-		// Jump critical: hop when the swing is almost charged, stop sprinting in the air.
-		if (this.critPlanned && !blocking) {
-			float charge = player.getAttackStrengthScale(0.5F);
-			if (player.onGround() && distance < reach + 0.4 && charge >= this.nextCharge - 0.25) {
-				jump = true;
-			} else if (!player.onGround()) {
-				forward = false;
-				sprint = false;
-			}
+		if (this.strafeOn && onGround) {
+			strafe = this.strafeLeft ? 1 : -1;
 		}
 
 		if (blocking) {
 			sprint = false;
 		}
 
+		// Step up blocks, get unstuck, follow the opponent up and swim.
 		this.stuckTicks = forward && player.horizontalCollision ? this.stuckTicks + 1 : 0;
-		if (player.onGround() && player.horizontalCollision && (forward || strafe != 0)) {
+		if (onGround && player.horizontalCollision && (forward || strafe != 0)) {
 			jump = true;
 		}
 		if (this.stuckTicks > 20) {
-			strafe = this.strafeDir;
-			if (this.stuckTicks % 20 == 0) {
-				this.strafeDir = -this.strafeDir;
-			}
+			strafe = this.strafeLeft ? 1 : -1;
 		}
-		if (player.onGround() && enemy.getY() - player.getY() > 0.6 && horizontalDistance(player, enemy) < 2.5) {
+		if (onGround && enemy.getY() - player.getY() > 0.6 && horizontalDistance(player, enemy) < 2.5) {
 			jump = true;
 		}
 		if (player.isInWater() || player.isInLava()) {
@@ -531,12 +552,15 @@ public final class BotController {
 
 	/** Backs away from the opponent while eating, still facing them. */
 	private void retreat(LocalPlayer player, LivingEntity enemy) {
-		this.updateStrafe(this.config.difficulty);
+		if (player.onGround() && this.strafeCd <= 0) {
+			this.strafeCd = STRAFE_REROLL_TICKS;
+			this.strafeLeft = this.random.nextBoolean();
+		}
 		boolean jump = player.onGround() && player.horizontalCollision;
 		if (player.isInWater() || player.isInLava()) {
 			jump = true;
 		}
-		this.setIntent(player, false, true, this.strafing ? this.strafeDir : 0, jump, false);
+		this.setIntent(player, false, true, this.strafeLeft ? 1 : -1, jump, false);
 	}
 
 	private void setIntent(LocalPlayer player, boolean forward, boolean backward, int strafe, boolean jump, boolean sprint) {
@@ -555,21 +579,22 @@ public final class BotController {
 		}
 		if (strafe != 0 && Terrain.isUnsafe(player.level(), player, leftX * strafe, leftZ * strafe)) {
 			strafe = -strafe;
-			this.strafeDir = strafe;
+			this.strafeLeft = strafe > 0;
 			if (Terrain.isUnsafe(player.level(), player, leftX * strafe, leftZ * strafe)) {
 				strafe = 0;
 			}
 		}
 
-		this.intent = BotInput.keys(forward, backward, strafe > 0, strafe < 0, jump, sprint && forward);
-	}
-
-	private void updateStrafe(Difficulty difficulty) {
-		if (--this.strafeTicks <= 0) {
-			this.strafing = this.random.nextDouble() < difficulty.strafeChance;
-			this.strafeDir = this.random.nextBoolean() ? 1 : -1;
-			this.strafeTicks = 8 + this.random.nextInt(18);
+		if (jump && !player.isInWater() && !player.isInLava()) {
+			double moveX = (forward ? forwardX : 0.0) - (backward ? forwardX : 0.0) + leftX * strafe;
+			double moveZ = (forward ? forwardZ : 0.0) - (backward ? forwardZ : 0.0) + leftZ * strafe;
+			double length = Math.sqrt(moveX * moveX + moveZ * moveZ);
+			if (length > 1.0E-4 && Terrain.isUnsafeJump(player.level(), player, moveX / length, moveZ / length)) {
+				jump = false;
+			}
 		}
+
+		this.intent = BotInput.keys(forward, backward, strafe > 0, strafe < 0, jump, sprint && forward);
 	}
 
 	private static double horizontalDistance(LivingEntity a, LivingEntity b) {
@@ -581,37 +606,28 @@ public final class BotController {
 	// ------------------------------------------------------------------------------------------
 	// Aiming
 
-	private void updateAim(LocalPlayer player, LivingEntity enemy, Difficulty difficulty) {
-		if (--this.jitterTicks <= 0) {
-			double amount = difficulty.aimJitter;
-			this.jitterGoal = new Vec3(
-				(this.random.nextDouble() * 2.0 - 1.0) * amount,
-				(this.random.nextDouble() * 2.0 - 1.0) * amount * 0.6,
-				(this.random.nextDouble() * 2.0 - 1.0) * amount
-			);
-			this.jitterTicks = 4 + this.random.nextInt(6);
-		}
-		this.jitter = this.jitter.lerp(this.jitterGoal, 0.25);
-
-		// Aim at the point of the hitbox closest to our eyes (pulled inwards a bit), which is
-		// what lands hits at the edge of reach.
+	/** Aims at the point of the opponent's hitbox closest to our eyes, pulled inwards a little. */
+	private void updateAim(LocalPlayer player, LivingEntity enemy) {
 		Vec3 eye = player.getEyePosition();
 		AABB box = enemy.getBoundingBox();
-		double insetX = box.getXsize() * 0.3;
-		double insetY = box.getYsize() * 0.2;
-		double insetZ = box.getZsize() * 0.3;
+		double insetX = box.getXsize() * 0.25;
+		double insetY = box.getYsize() * 0.15;
+		double insetZ = box.getZsize() * 0.25;
 		Vec3 point = new Vec3(
 			Mth.clamp(eye.x, box.minX + insetX, box.maxX - insetX),
 			Mth.clamp(eye.y, box.minY + insetY, box.maxY - insetY),
 			Mth.clamp(eye.z, box.minZ + insetZ, box.maxZ - insetZ)
 		);
 
+		// Other players are drawn a little behind their real position; lead them by a tick.
 		Vec3 velocity = enemy.position().subtract(enemy.xo, enemy.yo, enemy.zo);
-		point = point.add(velocity.scale(difficulty.predictTicks)).add(this.jitter);
-		this.aimOffset = point.subtract(enemy.position());
+		this.aimOffset = point.add(velocity).subtract(enemy.position());
 	}
 
-	/** Called every frame: turns the camera towards the aim point with a speed limit. */
+	/**
+	 * Called every frame: turns the camera towards the aim point. Like Quantum's bot it covers the
+	 * remaining angle in {@link #aimLag} ticks (1 = instantly).
+	 */
 	public void onFrame(Minecraft minecraft) {
 		LocalPlayer player = minecraft.player;
 		LivingEntity enemy = this.target;
@@ -644,11 +660,10 @@ public final class BotController {
 		float wantedYaw = (float) (Mth.atan2(dz, dx) * Mth.RAD_TO_DEG) - 90.0F;
 		float wantedPitch = (float) (-(Mth.atan2(dy, horizontal) * Mth.RAD_TO_DEG));
 
-		Difficulty difficulty = this.config.difficulty;
-		double follow = 1.0 - Math.exp(-difficulty.aimGain * seconds);
-		float maxStep = (float) (difficulty.aimSpeed * seconds);
-		float yawStep = Mth.clamp((float) (Mth.wrapDegrees(wantedYaw - player.getYRot()) * follow), -maxStep, maxStep);
-		float pitchStep = Mth.clamp((float) ((wantedPitch - player.getXRot()) * follow), -maxStep, maxStep);
+		double perTick = 1.0 / this.aimLag;
+		double follow = perTick >= 1.0 ? 1.0 : 1.0 - Math.pow(1.0 - perTick, seconds * 20.0);
+		float yawStep = (float) (Mth.wrapDegrees(wantedYaw - player.getYRot()) * follow);
+		float pitchStep = (float) ((wantedPitch - player.getXRot()) * follow);
 
 		player.setYRot(player.getYRot() + yawStep);
 		player.setXRot(Mth.clamp(player.getXRot() + pitchStep, -90.0F, 90.0F));

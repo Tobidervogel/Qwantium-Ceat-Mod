@@ -48,7 +48,7 @@ public class BotFightClientGameTest implements FabricClientGameTest {
 			doesNotWalkIntoLava(context, server);
 
 			HeroBotDuel duel = new HeroBotDuel(context, server);
-			for (Difficulty difficulty : new Difficulty[] {Difficulty.NORMAL, Difficulty.HARD, Difficulty.QUANTUM}) {
+			for (Difficulty difficulty : new Difficulty[] {Difficulty.NORMAL, Difficulty.HARD, Difficulty.CRAZY, Difficulty.QUANTUM}) {
 				HeroBotDuel.Result result = duel.play(difficulty, 3);
 				if (result.wins() + result.losses() == 0) {
 					throw new AssertionError("No one died in any " + difficulty.id() + " duel round; the bot is not fighting players");
@@ -58,6 +58,7 @@ public class BotFightClientGameTest implements FabricClientGameTest {
 		}
 
 		allowedOnServerWithMod(context);
+		QuantumMapDuel.runIfConfigured(context);
 	}
 
 	/** The bot walks up to a target that does not move, aims and kills it. */

@@ -53,6 +53,10 @@ loom {
 				// HeroBot handles its fake players' packets itself, which the gametest network
 				// synchronizer cannot track.
 				vmArg "-Dfabric.client.gametest.disableNetworkSynchronizer=true"
+				// Optional duel in Quantum's real map: ./gradlew runClientGameTest -PquantumMap=/path/to/map
+				if (project.hasProperty("quantumMap")) {
+					vmArg "-Dqwantiumbot.quantumMap=${project.property("quantumMap")}"
+				}
 			}
 		}
 	}

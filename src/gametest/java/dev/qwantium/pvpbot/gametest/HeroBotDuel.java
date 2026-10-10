@@ -16,7 +16,8 @@ import net.minecraft.world.scores.Scoreboard;
  *
  * <p>The opponent is driven by a simple but sharp script: it tracks you perfectly every tick
  * (looks at the closest point of your hitbox), sprints at you and swings every 12 ticks. Both
- * sides get the same kit (diamond sword, full iron armor).
+ * sides get the same kit (diamond sword, full iron armor) and, as in Quantum's map, share one team
+ * with friendly fire on.
  */
 final class HeroBotDuel {
 	static final String OPPONENT = "Sparring";
@@ -35,6 +36,9 @@ final class HeroBotDuel {
 		server.runCommand("scoreboard objectives add " + DEATHS + " deathCount");
 		server.runCommand("playerspawn " + OPPONENT + " at 0 " + GROUND_Y + " 7 facing north in survival");
 		context.waitTicks(20);
+		// Like Quantum's map: everyone, bots included, in one team with friendly fire on.
+		server.runCommand("team add qbot_rtp");
+		server.runCommand("team join qbot_rtp @a");
 	}
 
 	record Result(int wins, int losses, int draws) {

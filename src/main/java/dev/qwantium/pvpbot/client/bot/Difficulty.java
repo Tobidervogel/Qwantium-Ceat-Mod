@@ -3,66 +3,30 @@ package dev.qwantium.pvpbot.client.bot;
 import java.util.Locale;
 
 /**
- * Skill profiles for the bot.
+ * Skill levels, modelled on the levels of Quantum's PvP Practice sword bot. The play style
+ * (W/S-tap, strafing, crits, jump resets) is the same on every level; the levels differ in reach
+ * and in how far the aim lags behind.
  *
- * @param aimSpeed max turn speed in degrees per second
- * @param aimGain how quickly the aim closes the gap to the target (higher = snappier)
- * @param aimJitter random wobble of the aim point in blocks
- * @param reactionTicks ticks a new target must be engaged before the first swing
- * @param minCharge lowest attack charge (0..1) the bot swings at
- * @param maxCharge highest attack charge (0..1) the bot waits for
- * @param wTapChance chance to reset sprint after a hit for extra knockback
- * @param strafeChance chance to strafe sideways while in melee range
- * @param critChance chance to go for a jump critical hit
- * @param shieldChance chance to block with an offhand shield between hits
+ * @param reachBase lowest reach in tenths of a block; every hit rolls this plus a binomial(9, 1/2)
+ *     bonus, capped at 3.0 blocks
+ * @param aimBase slowest aim; every hit rolls a lag of 1..aimBase ticks to reach the target
  * @param eatHealth health (in half hearts) at which the bot eats a golden apple
- * @param predictTicks how far ahead the bot leads a moving target
  */
 public enum Difficulty {
-	EASY(220.0, 7.0, 0.22, 8, 0.70, 0.90, 0.0, 0.30, 0.00, 0.10, 6.0f, 0.0),
-	NORMAL(420.0, 12.0, 0.14, 5, 0.88, 1.00, 0.40, 0.60, 0.15, 0.35, 8.0f, 1.0),
-	HARD(650.0, 18.0, 0.08, 3, 0.95, 1.00, 0.80, 0.85, 0.30, 0.60, 10.0f, 1.5),
-	QUANTUM(900.0, 26.0, 0.04, 1, 1.00, 1.00, 1.00, 1.00, 0.40, 0.80, 10.0f, 2.0);
+	EASY(13, 5, 6.0F),
+	NORMAL(16, 4, 8.0F),
+	HARD(20, 3, 10.0F),
+	CRAZY(23, 2, 10.0F),
+	QUANTUM(29, 2, 10.0F);
 
-	public final double aimSpeed;
-	public final double aimGain;
-	public final double aimJitter;
-	public final int reactionTicks;
-	public final double minCharge;
-	public final double maxCharge;
-	public final double wTapChance;
-	public final double strafeChance;
-	public final double critChance;
-	public final double shieldChance;
+	public final int reachBase;
+	public final int aimBase;
 	public final float eatHealth;
-	public final double predictTicks;
 
-	Difficulty(
-		double aimSpeed,
-		double aimGain,
-		double aimJitter,
-		int reactionTicks,
-		double minCharge,
-		double maxCharge,
-		double wTapChance,
-		double strafeChance,
-		double critChance,
-		double shieldChance,
-		float eatHealth,
-		double predictTicks
-	) {
-		this.aimSpeed = aimSpeed;
-		this.aimGain = aimGain;
-		this.aimJitter = aimJitter;
-		this.reactionTicks = reactionTicks;
-		this.minCharge = minCharge;
-		this.maxCharge = maxCharge;
-		this.wTapChance = wTapChance;
-		this.strafeChance = strafeChance;
-		this.critChance = critChance;
-		this.shieldChance = shieldChance;
+	Difficulty(int reachBase, int aimBase, float eatHealth) {
+		this.reachBase = reachBase;
+		this.aimBase = aimBase;
 		this.eatHealth = eatHealth;
-		this.predictTicks = predictTicks;
 	}
 
 	public String id() {
