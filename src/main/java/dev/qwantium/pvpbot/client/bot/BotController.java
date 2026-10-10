@@ -2,6 +2,8 @@ package dev.qwantium.pvpbot.client.bot;
 
 import dev.qwantium.pvpbot.client.BotPermission;
 import dev.qwantium.pvpbot.client.ClientConfig;
+import dev.qwantium.pvpbot.client.QuantumRemote;
+import dev.qwantium.pvpbot.network.QuantumControlPayload;
 import dev.qwantium.pvpbot.mixin.client.KeyMappingAccessor;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.KeyMapping;
@@ -95,6 +97,9 @@ public final class BotController {
 	private boolean holdingUse;
 	private int deadTicks;
 
+	/** True while Quantum's bot plays this player through the Quantum bridge. */
+	private boolean remoteEngaged;
+
 	private BotController() {
 	}
 
@@ -114,9 +119,13 @@ public final class BotController {
 		return this.active;
 	}
 
-	/** True while the bot is fighting someone and has taken over movement and camera. */
+	/** True while the bot (or Quantum's bot via the bridge) has taken over movement and camera. */
 	public boolean isEngaged() {
-		return this.active && this.engaged;
+		return this.active && this.engaged || this.remoteEngaged;
+	}
+
+	public boolean isQuantumControlled() {
+		return this.remoteEngaged;
 	}
 
 	public @Nullable LivingEntity target() {
@@ -165,6 +174,9 @@ public final class BotController {
 			this.active = false;
 			this.shutdown(minecraft);
 		}
+		if (this.remoteEngaged) {
+			this.stopRemote(minecraft);
+		}
 	}
 
 	public static Component describeTarget(ClientConfig config) {
@@ -180,6 +192,14 @@ public final class BotController {
 
 	public void tick(Minecraft minecraft) {
 		LocalPlayer player = minecraft.player;
+		if (player != null && QuantumRemote.isActive(minecraft)) {
+			this.remoteTick(minecraft, player);
+			return;
+		}
+		if (this.remoteEngaged) {
+			this.stopRemote(minecraft);
+		}
+
 		if (!this.active || player == null || minecraft.level == null || minecraft.gameMode == null) {
 			return;
 		}
@@ -248,7 +268,56 @@ public final class BotController {
 	private void shutdown(Minecraft minecraft) {
 		this.disengage(minecraft);
 		LocalPlayer player = minecraft.player;
-		if (player != null && player.input instanceof BotInput botInput) {
+		if (!this.remoteEngaged && player != null && player.input instanceof BotInput botInput) {
+			player.input = botInput.keyboard();
+		}
+	}
+
+	// ------------------------------------------------------------------------------------------
+	// Quantum bridge
+
+	/** Plays the inputs Quantum's bot chose for us on the server as our own keys and camera. */
+	private void remoteTick(Minecraft minecraft, LocalPlayer player) {
+		if (this.engaged) {
+			this.disengage(minecraft);
+		}
+		this.remoteEngaged = true;
+		this.installInput(player);
+
+		QuantumControlPayload inputs = QuantumRemote.latest();
+		if (inputs == null || minecraft.screen != null || player.isDeadOrDying()) {
+			this.intent = Input.EMPTY;
+			return;
+		}
+
+		this.intent = new Input(
+			inputs.forward() > 0.01F,
+			inputs.forward() < -0.01F,
+			inputs.strafe() > 0.01F,
+			inputs.strafe() < -0.01F,
+			QuantumRemote.consumeJump(),
+			inputs.sneak(),
+			inputs.sprint()
+		);
+		// Quantum drops the sprint for crits; the server must see it stop.
+		if (!inputs.sprint() && player.isSprinting()) {
+			player.setSprinting(false);
+		}
+
+		// Attacks happen on the server with the server's rotation; follow it so movement and view match.
+		player.setYRot(inputs.yaw());
+		player.setXRot(Mth.clamp(inputs.pitch(), -90.0F, 90.0F));
+
+		if (inputs.slot() >= 0 && inputs.slot() < 9 && inputs.slot() != player.getInventory().getSelectedSlot()) {
+			player.getInventory().setSelectedSlot(inputs.slot());
+		}
+	}
+
+	private void stopRemote(Minecraft minecraft) {
+		this.remoteEngaged = false;
+		this.intent = Input.EMPTY;
+		LocalPlayer player = minecraft.player;
+		if (!this.active && player != null && player.input instanceof BotInput botInput) {
 			player.input = botInput.keyboard();
 		}
 	}
@@ -570,14 +639,18 @@ public final class BotController {
 		double leftX = Mth.cos(yaw);
 		double leftZ = Mth.sin(yaw);
 
+		boolean nearDanger = false;
 		if (forward && Terrain.isUnsafe(player.level(), player, forwardX, forwardZ)) {
 			forward = false;
 			sprint = false;
+			nearDanger = true;
 		}
 		if (backward && Terrain.isUnsafe(player.level(), player, -forwardX, -forwardZ)) {
 			backward = false;
+			nearDanger = true;
 		}
 		if (strafe != 0 && Terrain.isUnsafe(player.level(), player, leftX * strafe, leftZ * strafe)) {
+			nearDanger = true;
 			strafe = -strafe;
 			this.strafeLeft = strafe > 0;
 			if (Terrain.isUnsafe(player.level(), player, leftX * strafe, leftZ * strafe)) {
@@ -585,13 +658,30 @@ public final class BotController {
 			}
 		}
 
+		// Momentum counts too: a jump on the spot still carries the player along.
+		Vec3 velocity = player.getDeltaMovement();
+		double speed = Math.sqrt(velocity.x * velocity.x + velocity.z * velocity.z);
+		boolean driftingIntoDanger = speed > 0.05
+			&& Terrain.isUnsafeJump(player.level(), player, velocity.x / speed, velocity.z / speed);
+
 		if (jump && !player.isInWater() && !player.isInLava()) {
 			double moveX = (forward ? forwardX : 0.0) - (backward ? forwardX : 0.0) + leftX * strafe;
 			double moveZ = (forward ? forwardZ : 0.0) - (backward ? forwardZ : 0.0) + leftZ * strafe;
 			double length = Math.sqrt(moveX * moveX + moveZ * moveZ);
-			if (length > 1.0E-4 && Terrain.isUnsafeJump(player.level(), player, moveX / length, moveZ / length)) {
+			if (nearDanger || driftingIntoDanger
+				|| length > 1.0E-4 && Terrain.isUnsafeJump(player.level(), player, moveX / length, moveZ / length)) {
 				jump = false;
 			}
+		}
+
+		// In the air and heading for danger: steer against the momentum.
+		if (!player.onGround() && driftingIntoDanger) {
+			double alongForward = velocity.x * forwardX + velocity.z * forwardZ;
+			double alongLeft = velocity.x * leftX + velocity.z * leftZ;
+			forward = alongForward < 0.0;
+			backward = alongForward > 0.0;
+			strafe = alongLeft > 0.0 ? -1 : 1;
+			sprint = false;
 		}
 
 		this.intent = BotInput.keys(forward, backward, strafe > 0, strafe < 0, jump, sprint && forward);
@@ -632,7 +722,7 @@ public final class BotController {
 		LocalPlayer player = minecraft.player;
 		LivingEntity enemy = this.target;
 		Vec3 offset = this.aimOffset;
-		if (!this.isEngaged() || player == null || enemy == null || offset == null) {
+		if (!(this.active && this.engaged) || player == null || enemy == null || offset == null) {
 			this.lastFrameNanos = 0L;
 			return;
 		}

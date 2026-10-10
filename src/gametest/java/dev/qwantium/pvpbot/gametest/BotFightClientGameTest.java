@@ -28,6 +28,10 @@ public class BotFightClientGameTest implements FabricClientGameTest {
 	@Override
 	public void runTest(ClientGameTestContext context) {
 		context.runOnClient(minecraft -> minecraft.options.pauseOnLostFocus = false);
+		if (Boolean.getBoolean("qwantiumbot.quantumBridgeOnly")) {
+			QuantumMapDuel.runIfConfigured(context);
+			return;
+		}
 
 		try (TestSingleplayerContext singleplayer = context.worldBuilder().create()) {
 			singleplayer.getClientWorld().waitForChunksRender();
@@ -120,31 +124,40 @@ public class BotFightClientGameTest implements FabricClientGameTest {
 		System.out.println("[qwantiumbot-gametest] ate a golden apple at low health");
 	}
 
-	/** A lava trench lies between the bot and its target; the bot must not walk into it. */
+	/**
+	 * A lava trench lies between the bot and its target; the bot must not walk or jump into it. The
+	 * play style is random, so this runs a few times with the target at different spots.
+	 */
 	private static void doesNotWalkIntoLava(ClientGameTestContext context, TestServerContext server) {
-		resetArena(context, server);
-		server.runCommand("item replace entity @p hotbar.0 with minecraft:diamond_sword");
-		server.runCommand("fill -12 " + (GROUND_Y - 1) + " 4 12 " + (GROUND_Y - 1) + " 5 minecraft:lava");
-		server.runCommand("summon minecraft:husk 0 " + GROUND_Y + " 9 {NoAI:1b,PersistenceRequired:1b}");
-		context.waitTicks(5);
+		int[][] targets = {{0, 9}, {-4, 8}, {5, 10}};
+		for (int attempt = 0; attempt < targets.length; attempt++) {
+			resetArena(context, server);
+			server.runCommand("item replace entity @p hotbar.0 with minecraft:diamond_sword");
+			server.runCommand("fill -12 " + (GROUND_Y - 1) + " 4 12 " + (GROUND_Y - 1) + " 5 minecraft:lava");
+			server.runCommand("summon minecraft:husk " + targets[attempt][0] + " " + GROUND_Y + " " + targets[attempt][1]
+				+ " {NoAI:1b,PersistenceRequired:1b}");
+			context.waitTicks(5);
 
-		setBot(context, true);
-		for (int tick = 0; tick < 160; tick++) {
-			context.waitTick();
-			boolean burning = context.computeOnClient(minecraft -> minecraft.player.isInLava() || minecraft.player.isOnFire());
-			if (burning) {
-				context.takeScreenshot("qwantiumbot_lava_fail");
-				throw new AssertionError("Bot walked into lava after " + tick + " ticks");
+			setBot(context, true);
+			for (int tick = 0; tick < 160; tick++) {
+				context.waitTick();
+				boolean burning = context.computeOnClient(minecraft -> minecraft.player.isInLava() || minecraft.player.isOnFire());
+				if (burning) {
+					context.takeScreenshot("qwantiumbot_lava_fail");
+					throw new AssertionError("Bot walked into lava after " + tick + " ticks (attempt " + (attempt + 1) + ")");
+				}
 			}
+			boolean engaged = context.computeOnClient(minecraft -> BotController.get().isEngaged());
+			if (!engaged) {
+				throw new AssertionError("Bot should still be engaged with the husk across the lava");
+			}
+			if (attempt == 0) {
+				context.takeScreenshot("qwantiumbot_lava_edge");
+			}
+			setBot(context, false);
+			server.runCommand("fill -12 " + (GROUND_Y - 1) + " 4 12 " + (GROUND_Y - 1) + " 5 minecraft:grass_block");
 		}
-		boolean engaged = context.computeOnClient(minecraft -> BotController.get().isEngaged());
-		if (!engaged) {
-			throw new AssertionError("Bot should still be engaged with the husk across the lava");
-		}
-		context.takeScreenshot("qwantiumbot_lava_edge");
-		setBot(context, false);
-		server.runCommand("fill -12 " + (GROUND_Y - 1) + " 4 12 " + (GROUND_Y - 1) + " 5 minecraft:grass_block");
-		System.out.println("[qwantiumbot-gametest] stayed out of the lava");
+		System.out.println("[qwantiumbot-gametest] stayed out of the lava (" + targets.length + " attempts)");
 	}
 
 	/** On a dedicated server that runs the mod, the server allows the bot. */

@@ -9,11 +9,14 @@
     "main": ["dev.qwantium.pvpbot.QwantiumBotMod"],
     "client": ["dev.qwantium.pvpbot.client.QwantiumBotClient"]
   },
-  "mixins": ["qwantiumbot.mixins.json"],
+  "mixins": ["qwantiumbot.mixins.json", "qwantiumbot.herobot.mixins.json"],
   "depends": {
     "fabricloader": ">=0.16.0",
     "minecraft": "~1.21.11",
     "java": ">=21",
     "fabric-api": "*"
+  },
+  "suggests": {
+    "herobot": "*"
   }
 }

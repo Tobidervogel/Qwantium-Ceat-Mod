@@ -11,8 +11,8 @@ import net.minecraft.world.level.block.state.BlockState;
 /** Keeps the bot from walking into lava, fire or off cliffs while it chases or strafes. */
 final class Terrain {
 	private static final double[] WALK_PROBES = {0.6, 1.2};
-	/** A sprint jump carries about three blocks, so a jump checks the whole landing zone. */
-	private static final double[] JUMP_PROBES = {0.6, 1.2, 1.8, 2.4, 3.0};
+	/** A sprint jump carries up to four blocks, so a jump checks the whole landing zone. */
+	private static final double[] JUMP_PROBES = {0.6, 1.2, 1.8, 2.4, 3.0, 3.6, 4.2};
 	private static final int MAX_SAFE_DROP = 3;
 
 	private Terrain() {
@@ -23,7 +23,10 @@ final class Terrain {
 		return isUnsafe(level, entity, dirX, dirZ, WALK_PROBES);
 	}
 
-	/** Whether jumping while moving in the given horizontal direction (unit vector) would be dangerous. */
+	/**
+	 * Whether jumping (or flying through the air) in the given horizontal direction (unit vector)
+	 * would end in danger.
+	 */
 	static boolean isUnsafeJump(Level level, Entity entity, double dirX, double dirZ) {
 		return isUnsafe(level, entity, dirX, dirZ, JUMP_PROBES);
 	}
@@ -35,7 +38,7 @@ final class Terrain {
 				return true;
 			}
 
-			if (entity.onGround() && !isSolid(level, feet) && !hasSafeGroundBelow(level, feet)) {
+			if (!isSolid(level, feet) && !hasSafeGroundBelow(level, feet)) {
 				return true;
 			}
 		}

@@ -20,13 +20,20 @@ final class BotHud {
 	static void render(GuiGraphics graphics, DeltaTracker deltaTracker) {
 		Minecraft minecraft = Minecraft.getInstance();
 		BotController controller = BotController.get();
-		if (!controller.isActive() || minecraft.player == null || minecraft.options.hideGui) {
+		if (minecraft.player == null || minecraft.options.hideGui) {
 			return;
 		}
 
 		Font font = minecraft.font;
 		int x = 4;
 		int y = 4;
+		if (controller.isQuantumControlled()) {
+			graphics.drawString(font, Component.translatable("qwantiumbot.hud.quantum"), x, y, GREEN, true);
+			return;
+		}
+		if (!controller.isActive()) {
+			return;
+		}
 		LivingEntity target = controller.target();
 		if (target != null) {
 			graphics.drawString(font, Component.translatable("qwantiumbot.hud.fighting"), x, y, GREEN, true);

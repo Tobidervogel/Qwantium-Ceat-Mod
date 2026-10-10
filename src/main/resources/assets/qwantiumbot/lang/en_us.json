@@ -3,17 +3,14 @@
   "key.qwantiumbot.toggle": "Bot on/off",
   "key.qwantiumbot.lock_target": "Fight the player you look at",
   "key.qwantiumbot.cycle_difficulty": "Change difficulty",
-
   "qwantiumbot.difficulty.easy": "Easy",
   "qwantiumbot.difficulty.normal": "Intermediate",
   "qwantiumbot.difficulty.hard": "Hard",
   "qwantiumbot.difficulty.crazy": "Crazy",
   "qwantiumbot.difficulty.quantum": "Master",
-
   "qwantiumbot.target.nearest_player": "nearest player",
   "qwantiumbot.target.player": "only %s",
   "qwantiumbot.target.nearest_any": "nearest player or hostile mob",
-
   "qwantiumbot.msg.enabled": "PvP bot ON (%s, target: %s)",
   "qwantiumbot.msg.disabled": "PvP bot OFF",
   "qwantiumbot.msg.not_allowed": "The PvP bot only works in your singleplayer/LAN world or on servers that run the Qwantium PvP Bot mod.",
@@ -27,10 +24,17 @@
   "qwantiumbot.status.off": "off",
   "qwantiumbot.status.allowed": "allowed",
   "qwantiumbot.status.blocked": "not allowed",
-  "qwantiumbot.help": "/qbot on|off|toggle|status\n/qbot difficulty easy|normal|hard|crazy|quantum\n/qbot target nearest|mobs|<player>\n/qbot autorespawn true|false\n/qbot range <4-64>\nKeys: R = on/off, H = fight the player you look at, J = difficulty",
-
+  "qwantiumbot.help": "/qbot on|off|toggle|status\n/qbot difficulty easy|normal|hard|crazy|quantum\n/qbot target nearest|mobs|<player>\n/qbot quantum on|off  (Quantum's map bot plays you)\n/qbot autorespawn true|false\n/qbot range <4-64>\nKeys: R = on/off, H = fight the player you look at, J = difficulty",
   "qwantiumbot.hud.fighting": "Qwantium bot: FIGHTING",
   "qwantiumbot.hud.waiting": "Qwantium bot: waiting for an opponent",
   "qwantiumbot.hud.target": "Target: %s (%sm)",
-  "qwantiumbot.hud.difficulty": "Difficulty: %s"
+  "qwantiumbot.hud.difficulty": "Difficulty: %s",
+  "qwantiumbot.quantum.on": "Quantum control ON: the bot of Quantum's PvP Practice map now plays your character. Type /qbot quantum off to take back control.",
+  "qwantiumbot.quantum.off": "Quantum control OFF: you control your character again.",
+  "qwantiumbot.quantum.no_herobot": "Quantum control needs HeroBot (and Quantum's map) on the server or in your world.",
+  "qwantiumbot.quantum.no_server_mod": "Quantum control needs the Qwantium PvP Bot mod on the server (or your own singleplayer/LAN world).",
+  "qwantiumbot.quantum.pack_enabled": "Turned on the Qwantium bridge datapack (data reloaded).",
+  "qwantiumbot.quantum.requested": "Asking the server for Quantum control...",
+  "qwantiumbot.quantum.stopping": "Turning Quantum control off...",
+  "qwantiumbot.hud.quantum": "Quantum control: ACTIVE (/qbot quantum off)"
 }

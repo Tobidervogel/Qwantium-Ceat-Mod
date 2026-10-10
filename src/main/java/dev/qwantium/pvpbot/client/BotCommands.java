@@ -49,6 +49,9 @@ final class BotCommands {
 						context.getSource().getOnlinePlayerNames(), builder))
 					.executes(context -> setTarget(context.getSource(), TargetMode.PLAYER,
 						StringArgumentType.getString(context, "player")))))
+			.then(literal("quantum")
+				.then(literal("on").executes(context -> quantum(context.getSource(), true)))
+				.then(literal("off").executes(context -> quantum(context.getSource(), false))))
 			.then(literal("autorespawn")
 				.then(argument("enabled", BoolArgumentType.bool()).executes(context -> {
 					ClientConfig config = config();
@@ -74,6 +77,24 @@ final class BotCommands {
 
 	private static int setActive(FabricClientCommandSource source, boolean active) {
 		BotController.get().setActive(source.getClient(), active);
+		return Command.SINGLE_SUCCESS;
+	}
+
+	private static int quantum(FabricClientCommandSource source, boolean enable) {
+		if (enable && !BotPermission.isAllowed(source.getClient())) {
+			source.sendError(Component.translatable("qwantiumbot.msg.not_allowed"));
+			return 0;
+		}
+		if (!QuantumRemote.canRequest()) {
+			source.sendError(Component.translatable("qwantiumbot.quantum.no_server_mod"));
+			return 0;
+		}
+		if (enable && BotController.get().isActive()) {
+			// Quantum's bot takes over; our own engine steps aside.
+			BotController.get().setActive(source.getClient(), false);
+		}
+		QuantumRemote.request(enable);
+		source.sendFeedback(Component.translatable(enable ? "qwantiumbot.quantum.requested" : "qwantiumbot.quantum.stopping"));
 		return Command.SINGLE_SUCCESS;
 	}
 

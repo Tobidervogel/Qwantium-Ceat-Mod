@@ -32,6 +32,8 @@ dependencies {
 	// HeroBot fake players (the bots Quantum's PvP Practice map uses) as sparring partners in
 	// runClient and the gametests. Only on the dev runtime classpath, never shipped with the mod.
 	modLocalRuntime "maven.modrinth:herobot:${project.herobot_version}"
+	// Compile against HeroBot for the optional Quantum bridge; only used when HeroBot is installed.
+	modCompileOnly "maven.modrinth:herobot:${project.herobot_version}"
 }
 
 fabricApi {
@@ -56,6 +58,9 @@ loom {
 				// Optional duel in Quantum's real map: ./gradlew runClientGameTest -PquantumMap=/path/to/map
 				if (project.hasProperty("quantumMap")) {
 					vmArg "-Dqwantiumbot.quantumMap=${project.property("quantumMap")}"
+				}
+				if (project.hasProperty("quantumBridgeOnly")) {
+					vmArg "-Dqwantiumbot.quantumBridgeOnly=true"
 				}
 			}
 		}

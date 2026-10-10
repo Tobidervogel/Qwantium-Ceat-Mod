@@ -5,6 +5,7 @@ import dev.qwantium.pvpbot.QwantiumBotMod;
 import dev.qwantium.pvpbot.client.bot.BotController;
 import dev.qwantium.pvpbot.client.bot.TargetMode;
 import dev.qwantium.pvpbot.network.BotPermissionPayload;
+import dev.qwantium.pvpbot.network.QuantumControlPayload;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -42,14 +43,19 @@ public class QwantiumBotClient implements ClientModInitializer {
 		difficultyKey = KeyBindingHelper.registerKeyBinding(
 			new KeyMapping("key.qwantiumbot.cycle_difficulty", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_J, CATEGORY));
 
-		ClientTickEvents.START_CLIENT_TICK.register(controller::tick);
+		ClientTickEvents.START_CLIENT_TICK.register(client -> {
+			QuantumRemote.tick();
+			controller.tick(client);
+		});
 		ClientTickEvents.END_CLIENT_TICK.register(QwantiumBotClient::handleKeys);
 
 		ClientPlayNetworking.registerGlobalReceiver(BotPermissionPayload.TYPE,
 			(payload, context) -> BotPermission.setServerAllowed(payload.allowed()));
+		ClientPlayNetworking.registerGlobalReceiver(QuantumControlPayload.TYPE, (payload, context) -> QuantumRemote.onPayload(payload));
 		ClientPlayConnectionEvents.INIT.register((handler, client) -> BotPermission.setServerAllowed(false));
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
 			BotPermission.setServerAllowed(false);
+			QuantumRemote.reset();
 			controller.forceOff(client);
 		});
 

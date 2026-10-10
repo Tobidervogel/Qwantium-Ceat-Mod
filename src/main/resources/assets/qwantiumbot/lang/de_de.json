@@ -3,17 +3,14 @@
   "key.qwantiumbot.toggle": "Bot an/aus",
   "key.qwantiumbot.lock_target": "Angeschauten Spieler bekämpfen",
   "key.qwantiumbot.cycle_difficulty": "Schwierigkeit wechseln",
-
   "qwantiumbot.difficulty.easy": "Leicht",
   "qwantiumbot.difficulty.normal": "Mittel",
   "qwantiumbot.difficulty.hard": "Schwer",
   "qwantiumbot.difficulty.crazy": "Crazy",
   "qwantiumbot.difficulty.quantum": "Master",
-
   "qwantiumbot.target.nearest_player": "nächster Spieler",
   "qwantiumbot.target.player": "nur %s",
   "qwantiumbot.target.nearest_any": "nächster Spieler oder feindlicher Mob",
-
   "qwantiumbot.msg.enabled": "PvP-Bot AN (%s, Ziel: %s)",
   "qwantiumbot.msg.disabled": "PvP-Bot AUS",
   "qwantiumbot.msg.not_allowed": "Der PvP-Bot funktioniert nur in deiner Singleplayer-/LAN-Welt oder auf Servern, auf denen die Qwantium-PvP-Bot-Mod installiert ist.",
@@ -27,10 +24,17 @@
   "qwantiumbot.status.off": "aus",
   "qwantiumbot.status.allowed": "erlaubt",
   "qwantiumbot.status.blocked": "nicht erlaubt",
-  "qwantiumbot.help": "/qbot on|off|toggle|status\n/qbot difficulty easy|normal|hard|crazy|quantum\n/qbot target nearest|mobs|<Spieler>\n/qbot autorespawn true|false\n/qbot range <4-64>\nTasten: R = an/aus, H = angeschauten Spieler bekämpfen, J = Schwierigkeit",
-
+  "qwantiumbot.help": "/qbot on|off|toggle|status\n/qbot difficulty easy|normal|hard|crazy|quantum\n/qbot target nearest|mobs|<Spieler>\n/qbot quantum on|off  (Quantums Map-Bot spielt dich)\n/qbot autorespawn true|false\n/qbot range <4-64>\nTasten: R = an/aus, H = angeschauten Spieler bekämpfen, J = Schwierigkeit",
   "qwantiumbot.hud.fighting": "Qwantium-Bot: KÄMPFT",
   "qwantiumbot.hud.waiting": "Qwantium-Bot: wartet auf Gegner",
   "qwantiumbot.hud.target": "Ziel: %s (%sm)",
-  "qwantiumbot.hud.difficulty": "Schwierigkeit: %s"
+  "qwantiumbot.hud.difficulty": "Schwierigkeit: %s",
+  "qwantiumbot.quantum.on": "Quantum-Steuerung AN: Der Bot aus Quantums PvP-Practice-Map spielt jetzt deinen Charakter. Mit /qbot quantum off übernimmst du wieder selbst.",
+  "qwantiumbot.quantum.off": "Quantum-Steuerung AUS: Du steuerst deinen Charakter wieder selbst.",
+  "qwantiumbot.quantum.no_herobot": "Für die Quantum-Steuerung muss HeroBot (und Quantums Map) auf dem Server bzw. in deiner Welt laufen.",
+  "qwantiumbot.quantum.no_server_mod": "Für die Quantum-Steuerung muss die Qwantium-PvP-Bot-Mod auf dem Server laufen (oder du spielst in deiner eigenen Singleplayer-/LAN-Welt).",
+  "qwantiumbot.quantum.pack_enabled": "Das Qwantium-Brücken-Datapack wurde eingeschaltet (Daten neu geladen).",
+  "qwantiumbot.quantum.requested": "Frage den Server nach Quantum-Steuerung...",
+  "qwantiumbot.quantum.stopping": "Schalte die Quantum-Steuerung aus...",
+  "qwantiumbot.hud.quantum": "Quantum-Steuerung: AKTIV (/qbot quantum off)"
 }

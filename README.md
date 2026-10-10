@@ -2,7 +2,12 @@
 
 Fabric-Mod für **Minecraft 1.21.11**: Ein PvP-Trainingsbot, der im Kampf **deinen eigenen Charakter** steuert. Er zielt, läuft, sprintet, strafed, schlägt, blockt mit dem Schild und isst Gapples. Damit kann z. B. dein Mitspieler den Bot anmachen, und du trainierst gegen ihn.
 
-Inoffiziell und nicht mit QuantumUltimate / „Quantum's PvP Practice“ verbunden. Die Engine ist selbst geschrieben. Ihr Kampfstil ist dem Schwert-Bot aus Quantums Map nachgebaut (Timings, Reichweiten, W/S-Tap, Crits). Es steckt aber kein Code und keine Datei aus der Map in dieser Mod.
+Es gibt zwei Modi:
+
+- **Eigene Engine** (Taste **R**): Unser Bot spielt im Stil von Quantums Schwert-Bot (Timings, Reichweiten, W/S-Tap, Crits). Er läuft in jeder Welt.
+- **Quantum-Steuerung** (`/qbot quantum on`): In Quantums Map spielt **Quantums eigene Bot-KI** deinen Charakter. Siehe [unten](#quantum-steuerung-quantums-bot-spielt-dich).
+
+Inoffiziell und nicht mit QuantumUltimate / „Quantum's PvP Practice“ verbunden. In dieser Mod steckt kein Code und keine Datei aus Quantums Map.
 
 ## Wo funktioniert der Bot?
 
@@ -50,6 +55,7 @@ Solange der Bot keinen Gegner hat, kannst du ganz normal selbst laufen.
 /qbot target nearest          nächster Spieler (nicht aus deinem Team)
 /qbot target <Spieler>        nur diesen Spieler
 /qbot target mobs             Spieler und feindliche Mobs (zum Alleine-Testen)
+/qbot quantum on|off          Quantums Map-Bot spielt deinen Charakter (siehe unten)
 /qbot autorespawn true|false  nach dem Tod automatisch respawnen
 /qbot range <4-64>            Suchradius in Blöcken
 ```
@@ -114,7 +120,10 @@ Der automatische Test (`src/gametest`) erstellt eine Testwelt und prüft:
 - er läuft nicht in einen Lavagraben
 - ein Server mit der Mod erlaubt den Bot
 - Duelle gegen einen HeroBot-Spieler: perfektes Zielen, Dauersprint, ein Schlag alle 12 Ticks, und wie in Quantums Map sind beide im selben Team mit Friendly Fire. Je 3 Runden auf Mittel, Schwer, Crazy und Master, der Punktestand steht im Log.
-- Optional ein Kampf in **Quantums echter Map** gegen seinen Bot: `./gradlew runClientGameTest -PquantumMap=/pfad/zur/entpackten/map`. Der Test lädt eine Kopie der Map, startet einen Schwert-Kampf, lässt unseren Bot 2 Minuten auf Master kämpfen und schreibt Treffer, Totem-Pops und Tode ins Log. Die Map selbst gehört nicht ins Repo.
+- Optional in **Quantums echter Map**: `./gradlew runClientGameTest -PquantumMap=/pfad/zur/entpackten/map`. Der Test lädt eine Kopie der Map. Die Map selbst gehört nicht ins Repo.
+  1. Unsere Engine kämpft 2 Minuten auf Master gegen `quantumbot`. Treffer, Totem-Pops und Tode stehen im Log.
+  2. **Quantum-Steuerung:** Quantums Bot-KI spielt den Test-Spieler 1 Minute gegen einen HeroBot-Gegner. Der Test prüft, dass Quantum steuert, sich bewegt und trifft.
+  - Nur Teil 2: zusätzlich `-PquantumBridgeOnly`.
 
 ## Zusammen mit Quantum's PvP Practice testen
 
@@ -127,3 +136,33 @@ Der automatische Test (`src/gametest`) erstellt eine Testwelt und prüft:
 4. Den Quantum-Bot anschauen und **H** drücken, damit unser Bot nur ihn angreift und nicht andere Fake-Spieler in der Lobby. Dann **R** drücken.
 
 Hinweis: Im Schwert-Modus ohne Schild bekommt Quantums Bot jeden Tick ein neues Totem und stirbt deshalb nicht. Gezählt werden die Totem-Pops in der Anzeige rechts.
+
+## Quantum-Steuerung: Quantums Bot spielt dich
+
+Mit `/qbot quantum on` übernimmt **Quantums eigene Bot-KI** aus der Map deinen Charakter. Dein Mitspieler kann dann gegen „Quantum in deinem Körper“ trainieren.
+
+**Voraussetzungen:**
+- **Beim Host** (wer die Welt öffnet bzw. auf dem Server): Quantums Map, HeroBot, Fabric API und diese Mod
+- **Bei dir:** diese Mod
+
+**So geht's:**
+1. Host öffnet Quantums Map (für einen Freund: „Im LAN öffnen“).
+2. Du tippst `/qbot quantum on`.
+   - Beim ersten Mal schaltet das das Datapack „Qwantium PvP Bot: Quantum bridge“ ein, und die Map-Daten werden einmal neu geladen.
+   - Oben links steht danach „Quantum-Steuerung: AKTIV“.
+3. Ein Kampf wird gestartet wie gewohnt. Quantums Bot-Logik spielt jetzt dich, und alle anderen Spieler sind das Ziel.
+4. `/qbot quantum off` gibt dir die Kontrolle zurück.
+
+**Was dabei passiert:**
+- Das kleine Brücken-Datapack ersetzt Quantums Funktion, die festlegt, wer Bot und wer Ziel ist. Wer die Quantum-Steuerung an hat, ist der Bot, alle anderen sind Ziele. Quantums eigener Fake-Bot `quantumbot` setzt dann aus.
+- HeroBot nimmt Quantums `/player`-Befehle (laufen, zielen, sprinten, springen, schlagen, Schild, Hotbar) für dich an. Schlagen, Schild und Essen passieren auf dem Server, Laufen, Blick und Sprünge schickt der Server jeden Tick an deinen Client.
+- Beim Einschalten bekommst du die Scoreboard-Werte von `quantumbot`, die dir noch fehlen (Reichweite, Zielen, Cooldowns), damit Quantums Logik für dich läuft.
+- Die Map gibt dir beim Start die Ausrüstung ihres Bots.
+
+**Sicherheit:**
+- Nur **du selbst** kannst die Steuerung für deinen Charakter einschalten. Ohne `/qbot quantum on` ignoriert dein Client alle Steuerdaten.
+- Nur in Singleplayer/LAN oder auf Servern mit dieser Mod (`allow-bot` in `config/qwantiumbot-server.properties`).
+- Endet automatisch, wenn du die Welt verlässt.
+- `/player … disconnect` und `kill` aus der Map wirken weiter nur auf Fake-Spieler, du wirst also nicht rausgeworfen.
+
+**Alleine testen:** Ohne Mitspieler brauchst du einen Gegner, zum Beispiel einen HeroBot-Spieler: `/playerspawn Gegner in survival`.

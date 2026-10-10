@@ -1,6 +1,9 @@
 package dev.qwantium.pvpbot;
 
 import dev.qwantium.pvpbot.network.BotPermissionPayload;
+import dev.qwantium.pvpbot.network.QuantumControlPayload;
+import dev.qwantium.pvpbot.network.QuantumControlRequestPayload;
+import dev.qwantium.pvpbot.quantum.QuantumBridge;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
@@ -23,6 +26,8 @@ public class QwantiumBotMod implements ModInitializer {
 	@Override
 	public void onInitialize() {
 		PayloadTypeRegistry.playS2C().register(BotPermissionPayload.TYPE, BotPermissionPayload.CODEC);
+		PayloadTypeRegistry.playS2C().register(QuantumControlPayload.TYPE, QuantumControlPayload.CODEC);
+		PayloadTypeRegistry.playC2S().register(QuantumControlRequestPayload.TYPE, QuantumControlRequestPayload.CODEC);
 
 		ServerConfig config = ServerConfig.load();
 		LOGGER.info("Qwantium PvP Bot: bot for joining players is {}", config.allowBot() ? "allowed" : "disabled");
@@ -32,5 +37,6 @@ public class QwantiumBotMod implements ModInitializer {
 				sender.sendPacket(new BotPermissionPayload(config.allowBot()));
 			}
 		});
+		QuantumBridge.init(config);
 	}
 }
