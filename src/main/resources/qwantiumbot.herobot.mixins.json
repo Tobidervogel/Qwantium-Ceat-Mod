@@ -1,0 +1,14 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "dev.qwantium.pvpbot.mixin.herobot",
+  "plugin": "dev.qwantium.pvpbot.mixin.herobot.HeroBotMixinPlugin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "BotPlayerActionPackAccessor",
+    "PlayerCommandMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "dev.qwantium.pvpbot.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "common.ServerPlayerMixin"
+  ],
+  "client": [
+    "client.KeyMappingAccessor",
+    "client.MouseHandlerMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

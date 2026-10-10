@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "id": "qwantiumbot-gametest",
+  "version": "1.0.0",
+  "name": "Qwantium PvP Bot gametests",
+  "environment": "*",
+  "entrypoints": {
+    "fabric-client-gametest": ["dev.qwantium.pvpbot.gametest.BotFightClientGameTest"]
+  },
+  "depends": {
+    "qwantiumbot": "*"
+  }
+}

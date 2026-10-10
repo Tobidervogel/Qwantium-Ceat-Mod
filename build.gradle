@@ -1,0 +1,90 @@
+plugins {
+	id 'fabric-loom' version "${loom_version}"
+}
+
+version = "${project.mod_version}+mc${project.minecraft_version}"
+group = project.maven_group
+
+base {
+	archivesName = project.archives_base_name
+}
+
+repositories {
+	exclusiveContent {
+		forRepository {
+			maven {
+				name = "Modrinth"
+				url = "https://api.modrinth.com/maven"
+			}
+		}
+		filter {
+			includeGroup "maven.modrinth"
+		}
+	}
+}
+
+dependencies {
+	minecraft "com.mojang:minecraft:${project.minecraft_version}"
+	mappings loom.officialMojangMappings()
+	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+
+	// HeroBot fake players (the bots Quantum's PvP Practice map uses) as sparring partners in
+	// runClient and the gametests. Only on the dev runtime classpath, never shipped with the mod.
+	modLocalRuntime "maven.modrinth:herobot:${project.herobot_version}"
+	// Compile against HeroBot for the optional Quantum bridge; only used when HeroBot is installed.
+	modCompileOnly "maven.modrinth:herobot:${project.herobot_version}"
+}
+
+fabricApi {
+	// Client gametests: ./gradlew runClientGameTest starts the real game, builds a test world
+	// and checks that the bot fights (see src/gametest).
+	configureTests {
+		createSourceSet = true
+		modId = "qwantiumbot-gametest"
+		enableGameTests = false
+		enableClientGameTests = true
+		eula = true
+	}
+}
+
+loom {
+	runs {
+		configureEach {
+			if (name == "clientGameTest") {
+				// HeroBot handles its fake players' packets itself, which the gametest network
+				// synchronizer cannot track.
+				vmArg "-Dfabric.client.gametest.disableNetworkSynchronizer=true"
+				// Optional duel in Quantum's real map: ./gradlew runClientGameTest -PquantumMap=/path/to/map
+				if (project.hasProperty("quantumMap")) {
+					vmArg "-Dqwantiumbot.quantumMap=${project.property("quantumMap")}"
+				}
+				if (project.hasProperty("duelRounds")) {
+					vmArg "-Dqwantiumbot.duelRounds=${project.property("duelRounds")}"
+				}
+				if (project.hasProperty("quantumBridgeOnly")) {
+					vmArg "-Dqwantiumbot.quantumBridgeOnly=true"
+				}
+			}
+		}
+	}
+}
+
+processResources {
+	inputs.property "version", project.version
+
+	filesMatching("fabric.mod.json") {
+		expand "version": inputs.properties.version
+	}
+}
+
+tasks.withType(JavaCompile).configureEach {
+	it.options.release = 21
+	it.options.encoding = "UTF-8"
+}
+
+java {
+	withSourcesJar()
+	sourceCompatibility = JavaVersion.VERSION_21
+	targetCompatibility = JavaVersion.VERSION_21
+}
