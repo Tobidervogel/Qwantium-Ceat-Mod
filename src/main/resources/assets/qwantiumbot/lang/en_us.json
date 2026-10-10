@@ -1,0 +1,35 @@
+{
+  "key.category.qwantiumbot.main": "Qwantium PvP Bot",
+  "key.qwantiumbot.toggle": "Bot on/off",
+  "key.qwantiumbot.lock_target": "Fight the player you look at",
+  "key.qwantiumbot.cycle_difficulty": "Change difficulty",
+
+  "qwantiumbot.difficulty.easy": "Easy",
+  "qwantiumbot.difficulty.normal": "Normal",
+  "qwantiumbot.difficulty.hard": "Hard",
+  "qwantiumbot.difficulty.quantum": "Quantum",
+
+  "qwantiumbot.target.nearest_player": "nearest player",
+  "qwantiumbot.target.player": "only %s",
+  "qwantiumbot.target.nearest_any": "nearest player or hostile mob",
+
+  "qwantiumbot.msg.enabled": "PvP bot ON (%s, target: %s)",
+  "qwantiumbot.msg.disabled": "PvP bot OFF",
+  "qwantiumbot.msg.not_allowed": "The PvP bot only works in your singleplayer/LAN world or on servers that run the Qwantium PvP Bot mod.",
+  "qwantiumbot.msg.difficulty": "Difficulty: %s",
+  "qwantiumbot.msg.unknown_difficulty": "Unknown difficulty: %s (easy, normal, hard, quantum)",
+  "qwantiumbot.msg.target": "Target: %s",
+  "qwantiumbot.msg.autorespawn": "Auto respawn: %s",
+  "qwantiumbot.msg.range": "Search range: %s blocks",
+  "qwantiumbot.msg.status": "Bot: %s | Difficulty: %s | Target: %s | Here: %s",
+  "qwantiumbot.status.on": "on",
+  "qwantiumbot.status.off": "off",
+  "qwantiumbot.status.allowed": "allowed",
+  "qwantiumbot.status.blocked": "not allowed",
+  "qwantiumbot.help": "/qbot on|off|toggle|status\n/qbot difficulty easy|normal|hard|quantum\n/qbot target nearest|mobs|<player>\n/qbot autorespawn true|false\n/qbot range <4-64>\nKeys: R = on/off, H = fight the player you look at, J = difficulty",
+
+  "qwantiumbot.hud.fighting": "Qwantium bot: FIGHTING",
+  "qwantiumbot.hud.waiting": "Qwantium bot: waiting for an opponent",
+  "qwantiumbot.hud.target": "Target: %s (%sm)",
+  "qwantiumbot.hud.difficulty": "Difficulty: %s"
+}

@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "id": "qwantiumbot",
+  "version": "${version}",
+  "name": "Qwantium PvP Bot",
+  "description": "A PvP training bot that takes over your own character in a fight. Works in singleplayer/LAN worlds and on servers that run this mod. Unofficial, not affiliated with QuantumUltimate.",
+  "environment": "*",
+  "entrypoints": {
+    "main": ["dev.qwantium.pvpbot.QwantiumBotMod"],
+    "client": ["dev.qwantium.pvpbot.client.QwantiumBotClient"]
+  },
+  "mixins": ["qwantiumbot.mixins.json"],
+  "depends": {
+    "fabricloader": ">=0.16.0",
+    "minecraft": "~1.21.11",
+    "java": ">=21",
+    "fabric-api": "*"
+  }
+}
